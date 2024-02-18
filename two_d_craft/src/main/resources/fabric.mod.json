@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "id": "two_d_craft",
+  "version": "${version}",
+  "name": "Two_d_craft",
+  "description": "2D Minecraft World Generation",
+  "authors": [
+    "Quidvio"
+  ],
+  "contact": {},
+  "license": "MIT",
+  "icon": "assets/two_d_craft/icon.png",
+  "environment": "*",
+  "accessWidener" : "two_d_craft.accesswidener",
+  "entrypoints": {
+    "client": [
+      "com.quidvio.two_d_craft.client.Two_d_craftClient"
+    ],
+    "main": [
+      "com.quidvio.two_d_craft.Two_d_craft"
+    ]
+  },
+  "mixins": [
+    "two_d_craft.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.15.7",
+    "fabric": "*",
+    "minecraft": "1.20.4"
+  }
+}

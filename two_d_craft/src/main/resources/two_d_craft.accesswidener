@@ -1,0 +1,5 @@
+accessWidener v2 named
+
+#accessible method net/minecraft/world/gen/chunk/ChunkNoiseSampler Lnet/minecraft/world/gen/chunk/ChunkNoiseSampler;getHorizontalCellBlockCount()I
+#accessible method net/minecraft/world/gen/chunk/ChunkNoiseSampler Lnet/minecraft/world/gen/chunk/ChunkNoiseSampler;getVerticalCellBlockCount()I
+#accessible method net/minecraft/world/gen/chunk/ChunkNoiseSampler Lnet/minecraft/world/gen/chunk/ChunkNoiseSampler;sampleBlockState()Lnet/minecraft/block/BlockState;
