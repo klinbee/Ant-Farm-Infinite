@@ -12,6 +12,7 @@ import com.mojang.datafixers.kinds.App;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.SharedConstants;
+import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.registry.Registry;
@@ -73,6 +74,7 @@ public final class ChunkGenerator2D extends ChunkGenerator {
     //public static final Codec<NoiseChunkGenerator> CODEC = RecordCodecBuilder.create((instance) -> instance.group(BiomeSource.CODEC.fieldOf("biome_source").forGetter(NoiseChunkGenerator::getBiomeSource), ChunkGeneratorSettings.REGISTRY_CODEC.fieldOf("settings").forGetter(NoiseChunkGenerator::getSettings)).apply(instance, instance.stable(NoiseChunkGenerator::new)));
 
 
+
     static {
         AIR = Blocks.AIR.getDefaultState();
     }
@@ -86,7 +88,7 @@ public final class ChunkGenerator2D extends ChunkGenerator {
     public ChunkGenerator2D(BiomeSource biomeSource, RegistryEntry<ChunkGeneratorSettings> settings) {
         super(biomeSource);
         this.settings = settings;
-        //this.defaultGen = new NoiseChunkGenerator(biomeSource, settings);
+        this.defaultGen = new NoiseChunkGenerator(biomeSource, settings);
         this.fluidLevelSampler = Suppliers.memoize(() -> {
             return createFluidLevelSampler((ChunkGeneratorSettings) settings.value());
         });
@@ -296,13 +298,9 @@ public final class ChunkGenerator2D extends ChunkGenerator {
                     set.add(chunkSection);
                 }
 
-                return CompletableFuture.supplyAsync(Util.debugSupplier("wgen_fill_noise", () -> {
-                    return this.populateNoise(blender, structureAccessor, noiseConfig, chunk, j, k);
-                }), Util.getMainWorkerExecutor()).whenCompleteAsync((chunkx, throwable) -> {
-                    Iterator var3 = set.iterator();
+                return CompletableFuture.supplyAsync(Util.debugSupplier("wgen_fill_noise", () -> this.populateNoise(blender, structureAccessor, noiseConfig, chunk, j, k)), Util.getMainWorkerExecutor()).whenCompleteAsync((chunkx, throwable) -> {
 
-                    while (var3.hasNext()) {
-                        ChunkSection chunkSection = (ChunkSection) var3.next();
+                    for (ChunkSection chunkSection : set) {
                         chunkSection.unlock();
                     }
 
@@ -314,8 +312,7 @@ public final class ChunkGenerator2D extends ChunkGenerator {
         Heightmap heightmap2 = chunk.getHeightmap(Heightmap.Type.WORLD_SURFACE_WG);
 
         BlockPos.Mutable mutable = new BlockPos.Mutable();
-        for (
-                int i = 0; i < chunk.getHeight(); ++i) {
+        for (int i = 0; i < chunk.getHeight(); ++i) {
             int j = chunk.getBottomY() + i;
             for (int k = 0; k < 16; ++k) {
                 for (int l = 0; l < 16; ++l) {
@@ -329,9 +326,7 @@ public final class ChunkGenerator2D extends ChunkGenerator {
     }
 
     private Chunk populateNoise(Blender blender, StructureAccessor structureAccessor, NoiseConfig noiseConfig, Chunk chunk, int minimumCellY, int cellHeight) {
-        ChunkNoiseSampler chunkNoiseSampler = chunk.getOrCreateChunkNoiseSampler((chunkx) -> {
-            return this.createChunkNoiseSampler(chunkx, structureAccessor, blender, noiseConfig);
-        });
+        ChunkNoiseSampler chunkNoiseSampler = chunk.getOrCreateChunkNoiseSampler((chunkx) -> this.createChunkNoiseSampler(chunkx, structureAccessor, blender, noiseConfig));
         Heightmap heightmap = chunk.getHeightmap(Heightmap.Type.OCEAN_FLOOR_WG);
         Heightmap heightmap2 = chunk.getHeightmap(Heightmap.Type.WORLD_SURFACE_WG);
         ChunkPos chunkPos = chunk.getPos();
@@ -344,7 +339,7 @@ public final class ChunkGenerator2D extends ChunkGenerator {
         int l = chunkNoiseSampler.getVerticalCellBlockCount();
         int m = 16 / k;
         int n = 16 / k;
-
+        int debugIndex = 0;
         for (int o = 0; o < m; ++o) {
             chunkNoiseSampler.sampleEndDensity(o);
 
@@ -379,11 +374,14 @@ public final class ChunkGenerator2D extends ChunkGenerator {
                                 double f = (double) z / (double) k;
                                 chunkNoiseSampler.interpolateZ(aa, f);
                                 BlockState blockState = chunkNoiseSampler.sampleBlockState();
+                                debugIndex++;
+                                if (debugIndex > 100) {
+                                    System.out.println(blockState);
+                                }
                                 if (blockState == null) {
                                     blockState = ((ChunkGeneratorSettings) this.settings.value()).defaultBlock();
                                 }
-
-                                blockState = this.getBlockState(chunkNoiseSampler, x, t, aa, blockState);
+                                //blockState = this.getBlockState(chunkNoiseSampler, x, t, aa, blockState);
                                 if (blockState != AIR && !SharedConstants.isOutsideGenerationArea(chunk.getPos())) {
                                     chunkSection.setBlockState(y, u, ab, blockState, false);
                                     heightmap.trackUpdate(y, t, ab, blockState);
@@ -401,7 +399,7 @@ public final class ChunkGenerator2D extends ChunkGenerator {
 
             chunkNoiseSampler.swapBuffers();
         }
-
+        System.out.println("hello");
         chunkNoiseSampler.stopInterpolation();
         return chunk;
     }
@@ -419,13 +417,16 @@ public final class ChunkGenerator2D extends ChunkGenerator {
     /* bruh da sea level */
     @Override
     public int getSeaLevel() {
-        return ((ChunkGeneratorSettings) this.settings.value()).seaLevel();
+        //return ((ChunkGeneratorSettings) this.settings.value()).seaLevel();
+        return 32;
     }
 
     /* bruh duh bedrock ish */
     @Override
     public int getMinimumY() {
-        return ((ChunkGeneratorSettings) this.settings.value()).generationShapeConfig().minimumY();
+        //return ((ChunkGeneratorSettings) this.settings.value()).generationShapeConfig().minimumY();
+        return 0;
+        //return defaultGen.getMinimumY();
     }
 
     /* this method spawns entities in the world */
