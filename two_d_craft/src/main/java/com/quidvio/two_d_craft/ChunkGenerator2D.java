@@ -20,6 +20,7 @@ import net.minecraft.block.Blocks;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.registry.*;
 import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.structure.StructureTemplateManager;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.BlockPos;
@@ -47,6 +48,7 @@ import net.minecraft.world.gen.carver.CarverContext;
 import net.minecraft.world.gen.carver.CarvingMask;
 import net.minecraft.world.gen.carver.ConfiguredCarver;
 import net.minecraft.world.gen.chunk.*;
+import net.minecraft.world.gen.chunk.placement.StructurePlacementCalculator;
 import net.minecraft.world.gen.densityfunction.DensityFunction;
 import net.minecraft.world.gen.densityfunction.DensityFunctionTypes;
 import net.minecraft.world.gen.densityfunction.DensityFunctions;
@@ -71,12 +73,13 @@ public final class ChunkGenerator2D extends ChunkGenerator {
     public static final Codec<ChunkGenerator2D> CODEC = RecordCodecBuilder.create((instance) -> instance.group(BiomeSource.CODEC.fieldOf("biome_source").forGetter(ChunkGenerator2D::getBiomeSource), ChunkGeneratorSettings.REGISTRY_CODEC.fieldOf("settings").forGetter(ChunkGenerator2D::getSettings)).apply(instance, instance.stable(ChunkGenerator2D::new)));
     //public static final Codec<NoiseChunkGenerator> CODEC = RecordCodecBuilder.create((instance) -> instance.group(BiomeSource.CODEC.fieldOf("biome_source").forGetter(NoiseChunkGenerator::getBiomeSource), ChunkGeneratorSettings.REGISTRY_CODEC.fieldOf("settings").forGetter(NoiseChunkGenerator::getSettings)).apply(instance, instance.stable(NoiseChunkGenerator::new)));
 
-
     static {
         AIR = Blocks.AIR.getDefaultState();
+        BARRIER = Blocks.BARRIER.getDefaultState();
     }
 
     private static final BlockState AIR;
+    private static final BlockState BARRIER;
     public NoiseChunkGenerator defaultGen;
     private final RegistryEntry<ChunkGeneratorSettings> settings;
     private final Supplier<AquiferSampler.FluidLevelSampler> fluidLevelSampler;
@@ -225,9 +228,11 @@ public final class ChunkGenerator2D extends ChunkGenerator {
     as well as a few other miscellaneous things. without this method, your world is just a blank stone (or whatever your default block is) canvas (plus any ores, etc) */
     @Override
     public void buildSurface(ChunkRegion region, StructureAccessor structures, NoiseConfig noiseConfig, Chunk chunk) {
-        if (!SharedConstants.isOutsideGenerationArea(chunk.getPos())) {
-            HeightContext heightContext = new HeightContext(this, region);
-            this.buildSurface(chunk, heightContext, noiseConfig, structures, region.getBiomeAccess(), region.getRegistryManager().get(RegistryKeys.BIOME), Blender.getBlender(region));
+        if (chunk.getPos().x == 0) {
+            if (!SharedConstants.isOutsideGenerationArea(chunk.getPos())) {
+                HeightContext heightContext = new HeightContext(this, region);
+                this.buildSurface(chunk, heightContext, noiseConfig, structures, region.getBiomeAccess(), region.getRegistryManager().get(RegistryKeys.BIOME), Blender.getBlender(region));
+            }
         }
     }
 
@@ -316,9 +321,9 @@ public final class ChunkGenerator2D extends ChunkGenerator {
             int j = chunk.getBottomY() + i;
             for (int k = 0; k < 16; ++k) {
                 for (int l = 0; l < 16; ++l) {
-                    chunk.setBlockState(mutable.set(k, j, l), AIR, false);
-                    heightmap.trackUpdate(k, j, l, AIR);
-                    heightmap2.trackUpdate(k, j, l, AIR);
+                    chunk.setBlockState(mutable.set(k, j, l), BARRIER, false);
+                    heightmap.trackUpdate(k, j, l, BARRIER);
+                    heightmap2.trackUpdate(k, j, l, BARRIER);
                 }
             }
         }
@@ -435,13 +440,19 @@ public final class ChunkGenerator2D extends ChunkGenerator {
         }
     }
 
-    /*
+
     @Override
     public void generateFeatures(StructureWorldAccess world, Chunk chunk, StructureAccessor structureAccessor) {
-    if (chunk.getPos().x == 0) {
-        ;
-    }
+        if (chunk.getPos().x == 0) {
+            defaultGen.generateFeatures(world, chunk, structureAccessor);
+        }
     }
 
-     */
+    @Override
+    public void setStructureStarts(DynamicRegistryManager registryManager, StructurePlacementCalculator placementCalculator, StructureAccessor structureAccessor, Chunk chunk, StructureTemplateManager structureTemplateManager) {
+        if (chunk.getPos().x == 0) {
+            defaultGen.setStructureStarts(registryManager,placementCalculator,structureAccessor,chunk,structureTemplateManager);
+        }
+    }
+
 }
