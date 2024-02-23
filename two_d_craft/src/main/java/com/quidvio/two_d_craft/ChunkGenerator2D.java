@@ -321,9 +321,9 @@ public final class ChunkGenerator2D extends ChunkGenerator {
             int j = chunk.getBottomY() + i;
             for (int k = 0; k < 16; ++k) {
                 for (int l = 0; l < 16; ++l) {
-                    chunk.setBlockState(mutable.set(k, j, l), BARRIER, false);
-                    heightmap.trackUpdate(k, j, l, BARRIER);
-                    heightmap2.trackUpdate(k, j, l, BARRIER);
+                    chunk.setBlockState(mutable.set(k, j, l), Blocks.BEDROCK.getDefaultState(), false);
+                    heightmap.trackUpdate(k, j, l, Blocks.BEDROCK.getDefaultState());
+                    heightmap2.trackUpdate(k, j, l, Blocks.BEDROCK.getDefaultState());
                 }
             }
         }
@@ -416,16 +416,13 @@ public final class ChunkGenerator2D extends ChunkGenerator {
     /* bruh da sea level */
     @Override
     public int getSeaLevel() {
-        //return ((ChunkGeneratorSettings) this.settings.value()).seaLevel();
-        return 32;
+        return ((ChunkGeneratorSettings) this.settings.value()).seaLevel();
     }
 
     /* bruh duh bedrock ish */
     @Override
     public int getMinimumY() {
-        //return ((ChunkGeneratorSettings) this.settings.value()).generationShapeConfig().minimumY();
-        return -64;
-        //return defaultGen.getMinimumY();
+        return ((ChunkGeneratorSettings) this.settings.value()).generationShapeConfig().minimumY();
     }
 
     /* this method spawns entities in the world */
