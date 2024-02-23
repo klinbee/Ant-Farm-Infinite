@@ -11,14 +11,16 @@ import com.google.common.collect.Sets;
 import com.mojang.datafixers.kinds.App;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.fabricmc.fabric.api.biome.v1.BiomeSelectionContext;
+import net.fabricmc.fabric.impl.biome.modification.BiomeSelectionContextImpl;
 import net.minecraft.SharedConstants;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
-import net.minecraft.registry.Registry;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.registry.RegistryKeys;
+import net.minecraft.client.world.ClientWorld;
+import net.minecraft.registry.*;
 import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
@@ -26,16 +28,12 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.random.CheckedRandom;
 import net.minecraft.util.math.random.ChunkRandom;
 import net.minecraft.util.math.random.RandomSeed;
-import net.minecraft.world.ChunkRegion;
-import net.minecraft.world.HeightLimitView;
-import net.minecraft.world.Heightmap;
-import net.minecraft.world.SpawnHelper;
+import net.minecraft.world.*;
 import net.minecraft.world.biome.Biome;
+import net.minecraft.world.biome.BiomeKeys;
 import net.minecraft.world.biome.GenerationSettings;
-import net.minecraft.world.biome.source.BiomeAccess;
-import net.minecraft.world.biome.source.BiomeCoords;
-import net.minecraft.world.biome.source.BiomeSource;
-import net.minecraft.world.biome.source.BiomeSupplier;
+import net.minecraft.world.biome.source.*;
+import net.minecraft.world.biome.source.util.MultiNoiseUtil;
 import net.minecraft.world.chunk.BelowZeroRetrogen;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.ChunkSection;
@@ -72,7 +70,6 @@ public final class ChunkGenerator2D extends ChunkGenerator {
     /* this is a very important field, we will come back to the codec later */
     public static final Codec<ChunkGenerator2D> CODEC = RecordCodecBuilder.create((instance) -> instance.group(BiomeSource.CODEC.fieldOf("biome_source").forGetter(ChunkGenerator2D::getBiomeSource), ChunkGeneratorSettings.REGISTRY_CODEC.fieldOf("settings").forGetter(ChunkGenerator2D::getSettings)).apply(instance, instance.stable(ChunkGenerator2D::new)));
     //public static final Codec<NoiseChunkGenerator> CODEC = RecordCodecBuilder.create((instance) -> instance.group(BiomeSource.CODEC.fieldOf("biome_source").forGetter(NoiseChunkGenerator::getBiomeSource), ChunkGeneratorSettings.REGISTRY_CODEC.fieldOf("settings").forGetter(NoiseChunkGenerator::getSettings)).apply(instance, instance.stable(NoiseChunkGenerator::new)));
-
 
 
     static {
@@ -130,6 +127,10 @@ public final class ChunkGenerator2D extends ChunkGenerator {
 
     public RegistryEntry<ChunkGeneratorSettings> getSettings() {
         return this.settings;
+    }
+
+    public BiomeSource getBiomeSource() {
+        return this.biomeSource;
     }
 
     public boolean matchesSettings(RegistryKey<ChunkGeneratorSettings> settings) {
@@ -279,8 +280,7 @@ public final class ChunkGenerator2D extends ChunkGenerator {
 
     @Override
     public CompletableFuture<Chunk> populateNoise(Executor executor, Blender blender, NoiseConfig noiseConfig, StructureAccessor structureAccessor, Chunk chunk) {
-        if (chunk.getPos().x == 0 && chunk.getPos().z == 0) {
-            System.out.println("hi");
+        if (Math.abs(chunk.getPos().x) == 0) {
             GenerationShapeConfig generationShapeConfig = ((ChunkGeneratorSettings) this.settings.value()).generationShapeConfig().trimHeight(chunk.getHeightLimitView());
             int i = generationShapeConfig.minimumY();
             int j = MathHelper.floorDiv(i, generationShapeConfig.verticalCellBlockCount());
@@ -339,7 +339,6 @@ public final class ChunkGenerator2D extends ChunkGenerator {
         int l = chunkNoiseSampler.getVerticalCellBlockCount();
         int m = 16 / k;
         int n = 16 / k;
-        int debugIndex = 0;
         for (int o = 0; o < m; ++o) {
             chunkNoiseSampler.sampleEndDensity(o);
 
@@ -374,10 +373,6 @@ public final class ChunkGenerator2D extends ChunkGenerator {
                                 double f = (double) z / (double) k;
                                 chunkNoiseSampler.interpolateZ(aa, f);
                                 BlockState blockState = chunkNoiseSampler.sampleBlockState();
-                                debugIndex++;
-                                if (debugIndex > 100) {
-                                    System.out.println(blockState);
-                                }
                                 if (blockState == null) {
                                     blockState = ((ChunkGeneratorSettings) this.settings.value()).defaultBlock();
                                 }
@@ -399,7 +394,6 @@ public final class ChunkGenerator2D extends ChunkGenerator {
 
             chunkNoiseSampler.swapBuffers();
         }
-        System.out.println("hello");
         chunkNoiseSampler.stopInterpolation();
         return chunk;
     }
@@ -425,7 +419,7 @@ public final class ChunkGenerator2D extends ChunkGenerator {
     @Override
     public int getMinimumY() {
         //return ((ChunkGeneratorSettings) this.settings.value()).generationShapeConfig().minimumY();
-        return 0;
+        return -64;
         //return defaultGen.getMinimumY();
     }
 
@@ -440,83 +434,14 @@ public final class ChunkGenerator2D extends ChunkGenerator {
             SpawnHelper.populateEntities(region, registryEntry, chunkPos, chunkRandom);
         }
     }
-}
 
-    /* this method builds the shape of the terrain. it places stone everywhere, which will later be overwritten with grass, terracotta, snow, sand, etc
-     by the buildSurface method. it also is responsible for putting the water in oceans. it returns a CompletableFuture-- you'll likely want this to be delegated to worker threads. */
     /*
     @Override
-    public CompletableFuture<Chunk> populateNoise(Executor executor, Blender blender, NoiseConfig noiseConfig, StructureAccessor structureAccessor, Chunk chunk) {
-        if (chunk.getPos().x == 0) {
-            try {
-                Chunk currentChunk = defaultGen.populateNoise(executor, blender, noiseConfig, structureAccessor, chunk).get();
-
-
-                Heightmap heightmap = currentChunk.getHeightmap(Heightmap.Type.OCEAN_FLOOR_WG);
-                Heightmap heightmap2 = currentChunk.getHeightmap(Heightmap.Type.WORLD_SURFACE_WG);
-
-                BlockPos.Mutable mutable = new BlockPos.Mutable();
-
-                for (int i = 0; i < currentChunk.getHeight(); ++i) {
-                    int j = currentChunk.getBottomY() + i;
-                    for (int k = 4; k < 16; ++k) {
-                        for (int l = 0; l < 16; ++l) {
-                            currentChunk.setBlockState(mutable.set(k, j, l), AIR, false);
-                            heightmap.trackUpdate(k, j, l, AIR);
-                            heightmap2.trackUpdate(k, j, l, AIR);
-                        }
-                    }
-                }
-                return CompletableFuture.completedFuture(currentChunk);
-
-            } catch (InterruptedException | ExecutionException e) {
-                e.printStackTrace();
-            }
-        }
-
-        Heightmap heightmap = chunk.getHeightmap(Heightmap.Type.OCEAN_FLOOR_WG);
-        Heightmap heightmap2 = chunk.getHeightmap(Heightmap.Type.WORLD_SURFACE_WG);
-
-        BlockPos.Mutable mutable = new BlockPos.Mutable();
-
-        for (int i = 0; i < chunk.getHeight(); ++i) {
-            BlockState blockState = Blocks.AIR.getDefaultState();
-            if (blockState != null) {
-                int j = chunk.getBottomY() + i;
-                for (int k = 0; k < 16; ++k) {
-                    for (int l = 0; l < 16; ++l) {
-                        chunk.setBlockState(mutable.set(k, j, l), blockState, false);
-                        heightmap.trackUpdate(k, j, l, blockState);
-                        heightmap2.trackUpdate(k, j, l, blockState);
-                    }
-                }
-            }
-        }
-        return CompletableFuture.completedFuture(chunk);
+    public void generateFeatures(StructureWorldAccess world, Chunk chunk, StructureAccessor structureAccessor) {
+    if (chunk.getPos().x == 0) {
+        ;
+    }
     }
 
      */
-/*
-    @Override
-    public CompletableFuture<Chunk> populateNoise(Executor executor, Blender blender, NoiseConfig noiseConfig, StructureAccessor structureAccessor, Chunk chunk) {
-        if (chunk.getPos().x == 0 && chunk.getPos().z == 0) {
-            return defaultGen.populateNoise(executor, blender, noiseConfig, structureAccessor, chunk);
-        }
-        Heightmap heightmap = chunk.getHeightmap(Heightmap.Type.OCEAN_FLOOR_WG);
-        Heightmap heightmap2 = chunk.getHeightmap(Heightmap.Type.WORLD_SURFACE_WG);
-
-        BlockPos.Mutable mutable = new BlockPos.Mutable();
-        for (int i = 0; i < chunk.getHeight(); ++i) {
-            int j = chunk.getBottomY() + i;
-            for (int k = 0; k < 16; ++k) {
-                for (int l = 0; l < 16; ++l) {
-                    chunk.setBlockState(mutable.set(k, j, l), AIR, false);
-                    heightmap.trackUpdate(k, j, l, AIR);
-                    heightmap2.trackUpdate(k, j, l, AIR);
-                }
-            }
-        }
-        return CompletableFuture.completedFuture(chunk);
-    }
-
- */
+}
