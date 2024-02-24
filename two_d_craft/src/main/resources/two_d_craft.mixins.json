@@ -4,6 +4,7 @@
   "package": "com.quidvio.two_d_craft.mixin",
   "compatibilityLevel": "JAVA_17",
   "mixins": [
+    "MultifaceGrowthBlockMixin",
     "ThreadedAnvilChunkStorageMixin"
   ],
   "client": [
