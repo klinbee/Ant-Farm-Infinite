@@ -8,7 +8,25 @@
         "biome_source": {
           "type": "minecraft:multi_noise",
           "preset": "minecraft:overworld"
-        }
+        },
+        "structure_overrides": [
+          "twodworld:ancient_cities",
+          "twodworld:buried_treasures",
+          "twodworld:desert_pyramids",
+          "twodworld:igloos",
+          "twodworld:jungle_temples",
+          "twodworld:mineshafts",
+          "twodworld:ocean_monuments",
+          "twodworld:ocean_ruins",
+          "twodworld:pillager_outposts",
+          "twodworld:ruined_portals",
+          "twodworld:shipwrecks",
+          "twodworld:strongholds",
+          "twodworld:swamp_huts",
+          "twodworld:trail_ruins",
+          "twodworld:villages",
+          "twodworld:woodland_mansions"
+        ]
       }
     },
     "minecraft:the_nether": {
@@ -19,7 +37,12 @@
         "biome_source": {
           "type": "minecraft:multi_noise",
           "preset": "minecraft:nether"
-        }
+        },
+        "structure_overrides": [
+          "twodworld:nether_complexes",
+          "twodworld:nether_fossils",
+          "twodworld:ruined_portals"
+        ]
       }
     },
     "minecraft:the_end": {
@@ -29,7 +52,10 @@
         "settings": "minecraft:end",
         "biome_source": {
           "type": "minecraft:the_end"
-        }
+        },
+        "structure_overrides": [
+          "twodworld:end_cities"
+        ]
       }
     }
   }

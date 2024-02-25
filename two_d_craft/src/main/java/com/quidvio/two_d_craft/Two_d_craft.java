@@ -1,13 +1,20 @@
 package com.quidvio.two_d_craft;
 
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.event.registry.DynamicRegistries;
 import net.fabricmc.fabric.api.object.builder.v1.block.FabricBlockSettings;
 import net.minecraft.block.Block;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.piston.PistonBehavior;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.Registry;
+import net.minecraft.registry.*;
+import net.minecraft.registry.entry.RegistryElementCodec;
+import net.minecraft.structure.StructureSet;
 import net.minecraft.util.Identifier;
+import net.minecraft.world.gen.chunk.placement.StructurePlacement;
+
+import java.util.function.BiFunction;
 
 public class Two_d_craft implements ModInitializer {
 
