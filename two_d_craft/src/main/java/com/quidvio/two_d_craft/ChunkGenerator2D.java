@@ -8,43 +8,41 @@ package com.quidvio.two_d_craft;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.Sets;
-import com.mojang.datafixers.kinds.App;
-import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
-import it.unimi.dsi.fastutil.objects.ObjectArraySet;
-import net.fabricmc.fabric.api.biome.v1.BiomeSelectionContext;
-import net.fabricmc.fabric.impl.biome.modification.BiomeSelectionContextImpl;
 import net.minecraft.SharedConstants;
-import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
-import net.minecraft.client.world.ClientWorld;
 import net.minecraft.registry.*;
 import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.registry.entry.RegistryEntryList;
 import net.minecraft.server.network.DebugInfoSender;
-import net.minecraft.server.world.ServerWorld;
 import net.minecraft.structure.StructureSet;
 import net.minecraft.structure.StructureStart;
 import net.minecraft.structure.StructureTemplateManager;
-import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
 import net.minecraft.util.crash.CrashException;
 import net.minecraft.util.crash.CrashReport;
 import net.minecraft.util.crash.CrashReportSection;
-import net.minecraft.util.math.*;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.ChunkPos;
+import net.minecraft.util.math.ChunkSectionPos;
+import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.random.CheckedRandom;
 import net.minecraft.util.math.random.ChunkRandom;
 import net.minecraft.util.math.random.RandomSeed;
 import net.minecraft.world.*;
 import net.minecraft.world.biome.Biome;
-import net.minecraft.world.biome.BiomeKeys;
 import net.minecraft.world.biome.GenerationSettings;
-import net.minecraft.world.biome.source.*;
+import net.minecraft.world.biome.source.BiomeAccess;
+import net.minecraft.world.biome.source.BiomeCoords;
+import net.minecraft.world.biome.source.BiomeSource;
+import net.minecraft.world.biome.source.BiomeSupplier;
 import net.minecraft.world.biome.source.util.MultiNoiseUtil;
-import net.minecraft.world.chunk.*;
+import net.minecraft.world.chunk.BelowZeroRetrogen;
+import net.minecraft.world.chunk.Chunk;
+import net.minecraft.world.chunk.ChunkSection;
+import net.minecraft.world.chunk.ProtoChunk;
 import net.minecraft.world.dimension.DimensionType;
 import net.minecraft.world.gen.GenerationStep;
 import net.minecraft.world.gen.HeightContext;
@@ -54,8 +52,6 @@ import net.minecraft.world.gen.carver.CarverContext;
 import net.minecraft.world.gen.carver.CarvingMask;
 import net.minecraft.world.gen.carver.ConfiguredCarver;
 import net.minecraft.world.gen.chunk.*;
-import net.minecraft.world.gen.chunk.placement.ConcentricRingsStructurePlacement;
-import net.minecraft.world.gen.chunk.placement.RandomSpreadStructurePlacement;
 import net.minecraft.world.gen.chunk.placement.StructurePlacement;
 import net.minecraft.world.gen.chunk.placement.StructurePlacementCalculator;
 import net.minecraft.world.gen.densityfunction.DensityFunction;
@@ -66,22 +62,17 @@ import net.minecraft.world.gen.noise.NoiseRouter;
 import net.minecraft.world.gen.structure.Structure;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.jetbrains.annotations.Nullable;
-import org.spongepowered.asm.mixin.Shadow;
 
 import java.text.DecimalFormat;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
-import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 public final class ChunkGenerator2D extends ChunkGenerator {
 
-    /* this is a very important field, we will come back to the codec later */
     public static final Codec<ChunkGenerator2D> CODEC = RecordCodecBuilder.create((instance) -> instance.group(BiomeSource.CODEC.fieldOf("biome_source").forGetter(ChunkGenerator2D::getBiomeSource), ChunkGeneratorSettings.REGISTRY_CODEC.fieldOf("settings").forGetter(ChunkGenerator2D::getSettings)).apply(instance, instance.stable(ChunkGenerator2D::new)));
-    //public static final Codec<NoiseChunkGenerator> CODEC = RecordCodecBuilder.create((instance) -> instance.group(BiomeSource.CODEC.fieldOf("biome_source").forGetter(NoiseChunkGenerator::getBiomeSource), ChunkGeneratorSettings.REGISTRY_CODEC.fieldOf("settings").forGetter(NoiseChunkGenerator::getSettings)).apply(instance, instance.stable(NoiseChunkGenerator::new)));
 
     static {
         AIR = Blocks.AIR.getDefaultState();
@@ -100,7 +91,9 @@ public final class ChunkGenerator2D extends ChunkGenerator {
     private final BiomeSource biomeSource;
     public int i = 0;
 
-    /* you can add whatever fields you want to this constructor, as long as they're added to the codec as well */
+    /**
+     * Added defaultGen for utility.
+     */
     public ChunkGenerator2D(BiomeSource biomeSource, RegistryEntry<ChunkGeneratorSettings> settings) {
         super(biomeSource);
         this.settings = settings;
