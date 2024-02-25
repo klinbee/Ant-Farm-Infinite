@@ -18,6 +18,7 @@ import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.registry.entry.RegistryEntryList;
 import net.minecraft.server.network.DebugInfoSender;
 import net.minecraft.structure.StructureSet;
+import net.minecraft.structure.StructureSets;
 import net.minecraft.structure.StructureStart;
 import net.minecraft.structure.StructureTemplateManager;
 import net.minecraft.util.Util;
@@ -33,6 +34,7 @@ import net.minecraft.util.math.random.ChunkRandom;
 import net.minecraft.util.math.random.RandomSeed;
 import net.minecraft.world.*;
 import net.minecraft.world.biome.Biome;
+import net.minecraft.world.biome.BuiltinBiomes;
 import net.minecraft.world.biome.GenerationSettings;
 import net.minecraft.world.biome.source.BiomeAccess;
 import net.minecraft.world.biome.source.BiomeCoords;
@@ -72,7 +74,7 @@ import java.util.function.Supplier;
 
 public final class ChunkGenerator2D extends ChunkGenerator {
 
-    public static final Codec<ChunkGenerator2D> CODEC = RecordCodecBuilder.create((instance) -> instance.group(BiomeSource.CODEC.fieldOf("biome_source").forGetter(ChunkGenerator2D::getBiomeSource), ChunkGeneratorSettings.REGISTRY_CODEC.fieldOf("settings").forGetter(ChunkGenerator2D::getSettings)).apply(instance, instance.stable(ChunkGenerator2D::new)));
+    public static final Codec<ChunkGenerator2D> CODEC = RecordCodecBuilder.create((instance) -> instance.group(BiomeSource.CODEC.fieldOf("biome_source").forGetter(ChunkGenerator2D::getBiomeSource), ChunkGeneratorSettings.REGISTRY_CODEC.fieldOf("settings").forGetter(ChunkGenerator2D::getSettings), RegistryCodecs.entryList(RegistryKeys.STRUCTURE_SET).fieldOf("structure_overrides").forGetter(ChunkGenerator2D::getStructureSetOverride)).apply(instance, instance.stable(ChunkGenerator2D::new)));
 
     static {
         AIR = Blocks.AIR.getDefaultState();
@@ -89,20 +91,24 @@ public final class ChunkGenerator2D extends ChunkGenerator {
     private final RegistryEntry<ChunkGeneratorSettings> settings;
     private final Supplier<AquiferSampler.FluidLevelSampler> fluidLevelSampler;
     private final BiomeSource biomeSource;
+    private final RegistryEntryList<StructureSet> structureSetOverride;
     public int i = 0;
 
     /**
      * Added defaultGen for utility.
      */
-    public ChunkGenerator2D(BiomeSource biomeSource, RegistryEntry<ChunkGeneratorSettings> settings) {
+    public ChunkGenerator2D(BiomeSource biomeSource, RegistryEntry<ChunkGeneratorSettings> settings, RegistryEntryList<StructureSet> structureSetOverride) {
         super(biomeSource);
         this.settings = settings;
         this.biomeSource = biomeSource;
+        this.structureSetOverride = structureSetOverride;
         this.defaultGen = new NoiseChunkGenerator(biomeSource, settings);
         this.fluidLevelSampler = Suppliers.memoize(() -> {
             return createFluidLevelSampler((ChunkGeneratorSettings) settings.value());
         });
+
     }
+
 
     private static AquiferSampler.FluidLevelSampler createFluidLevelSampler(ChunkGeneratorSettings settings) {
         AquiferSampler.FluidLevel fluidLevel = new AquiferSampler.FluidLevel(-54, Blocks.LAVA.getDefaultState());
@@ -145,6 +151,8 @@ public final class ChunkGenerator2D extends ChunkGenerator {
     public BiomeSource getBiomeSource() {
         return this.biomeSource;
     }
+
+    public RegistryEntryList<StructureSet> getStructureSetOverride() {return this.structureSetOverride;}
 
     public boolean matchesSettings(RegistryKey<ChunkGeneratorSettings> settings) {
         return this.settings.matchesKey(settings);
@@ -477,7 +485,7 @@ public final class ChunkGenerator2D extends ChunkGenerator {
             ChunkPos chunkPos = chunk.getPos();
             ChunkSectionPos chunkSectionPos = ChunkSectionPos.from(chunk);
             NoiseConfig noiseConfig = placementCalculator.getNoiseConfig();
-            placementCalculator.getStructureSets().forEach((structureSet) -> {
+            structureSetOverride.forEach((structureSet) -> {
                 StructurePlacement structurePlacement = ((StructureSet) structureSet.value()).placement();
                 List<StructureSet.WeightedEntry> list = ((StructureSet) structureSet.value()).structures();
                 Iterator var12 = list.iterator();
