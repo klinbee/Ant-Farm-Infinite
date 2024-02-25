@@ -133,7 +133,7 @@ public final class ChunkGenerator2D extends ChunkGenerator {
             return this.createChunkNoiseSampler(chunkx, structureAccessor, blender, noiseConfig);
         });
         BiomeSupplier biomeSupplier = BelowZeroRetrogen.getBiomeSupplier(blender.getBiomeSupplier(this.biomeSource), chunk);
-        chunk.populateBiomes(biomeSupplier, chunkNoiseSampler.createMultiNoiseSampler(noiseConfig.getNoiseRouter(), ((ChunkGeneratorSettings) this.settings.value()).spawnTarget()));
+        chunk.populateBiomes(biomeSupplier, chunkNoiseSampler.createMultiNoiseSampler(noiseConfig.getNoiseRouter(), new ArrayList<MultiNoiseUtil.NoiseHypercube>()));
     }
 
     private ChunkNoiseSampler createChunkNoiseSampler(Chunk chunk, StructureAccessor world, Blender blender, NoiseConfig noiseConfig) {
