@@ -1,2 +1,2 @@
-# 2d Minecraft
- Terraria? No lol
+# Ant Farm Infinite
+One Chunk Wide Worldgen
