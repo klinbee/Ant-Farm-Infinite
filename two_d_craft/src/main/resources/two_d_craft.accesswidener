@@ -6,3 +6,5 @@ accessible method net/minecraft/world/gen/chunk/ChunkNoiseSampler sampleBlockSta
 accessible method net/minecraft/world/gen/chunk/ChunkNoiseSampler createMultiNoiseSampler (Lnet/minecraft/world/gen/noise/NoiseRouter;Ljava/util/List;)Lnet/minecraft/world/biome/source/util/MultiNoiseUtil$MultiNoiseSampler;
 accessible class net/minecraft/world/gen/densityfunction/DensityFunctionTypes$Beardifier
 accessible class net/minecraft/world/gen/WorldPresets$Registrar
+accessible method net/minecraft/world/gen/chunk/placement/StructurePlacement getFrequencyReductionMethod ()Lnet/minecraft/world/gen/chunk/placement/StructurePlacement$FrequencyReductionMethod;
+accessible method net/minecraft/world/gen/chunk/placement/StructurePlacement getSalt ()I
