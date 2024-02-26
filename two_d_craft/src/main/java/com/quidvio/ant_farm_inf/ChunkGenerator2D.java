@@ -634,7 +634,7 @@ public final class ChunkGenerator2D extends ChunkGenerator {
                     int spacing = rand.nextInt(40) + 14;
                     placement = new RandomSpreadStructurePlacement(new Vec3i(0, 0, 0), placement.getFrequencyReductionMethod(), 0.8F, placement.getSalt(), Optional.empty(), spacing, spacing - 2, SpreadType.LINEAR);
                 }
-                if (chunk.getPos().z == 0) {
+                if (Math.abs(chunk.getPos().z) < 4) {
                     placement = new RandomSpreadStructurePlacement(new Vec3i(0, 0, 0), placement.getFrequencyReductionMethod(), 0.0F, 0, Optional.empty(), 1, 0, SpreadType.LINEAR);
                 }
                 StructurePlacement structurePlacement = placement;
