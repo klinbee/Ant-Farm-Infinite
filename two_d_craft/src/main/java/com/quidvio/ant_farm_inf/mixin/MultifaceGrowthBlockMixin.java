@@ -1,6 +1,6 @@
-package com.quidvio.two_d_craft.mixin;
+package com.quidvio.ant_farm_inf.mixin;
 
-import com.quidvio.two_d_craft.Two_d_craft;
+import com.quidvio.ant_farm_inf.Ant_farm_inf_main;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.MultifaceGrowthBlock;
 import net.minecraft.util.math.BlockPos;
@@ -15,8 +15,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public class MultifaceGrowthBlockMixin {
 
     @Inject(method = "Lnet/minecraft/block/MultifaceGrowthBlock;canGrowOn(Lnet/minecraft/world/BlockView;Lnet/minecraft/util/math/Direction;Lnet/minecraft/util/math/BlockPos;Lnet/minecraft/block/BlockState;)Z", at = @At("RETURN"), cancellable = true)
-    private static void stopGrowthOnBorders(BlockView world, Direction direction, BlockPos pos, BlockState state, CallbackInfoReturnable<Boolean> cir) {
-        cir.setReturnValue(!state.equals(Two_d_craft.BORDER_BLOCK.getDefaultState()) && cir.getReturnValue());
+    private static void ant_farm_inf_stopGrowthOnBorders_MGB(BlockView world, Direction direction, BlockPos pos, BlockState state, CallbackInfoReturnable<Boolean> cir) {
+        cir.setReturnValue(!state.equals(Ant_farm_inf_main.BORDER_BLOCK.getDefaultState()) && cir.getReturnValue());
     }
 
 }

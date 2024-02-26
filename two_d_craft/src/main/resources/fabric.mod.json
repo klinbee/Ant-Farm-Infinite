@@ -1,27 +1,27 @@
 {
   "schemaVersion": 1,
-  "id": "two_d_craft",
+  "id": "ant_farm_inf",
   "version": "${version}",
-  "name": "Two_d_craft",
-  "description": "2D Minecraft World Generation",
+  "name": "Ant_farm_inf",
+  "description": "1 Chunk Wide World Generation",
   "authors": [
     "Quidvio"
   ],
   "contact": {},
   "license": "MIT",
-  "icon": "assets/two_d_craft/icon.png",
+  "icon": "assets/ant_farm_inf/icon.png",
   "environment": "*",
-  "accessWidener" : "two_d_craft.accesswidener",
+  "accessWidener" : "ant_farm_inf.accesswidener",
   "entrypoints": {
     "client": [
-      "com.quidvio.two_d_craft.client.Two_d_craftClient"
+      "com.quidvio.ant_farm_inf.client.Ant_farm_infClient"
     ],
     "main": [
-      "com.quidvio.two_d_craft.Two_d_craft"
+      "com.quidvio.ant_farm_inf.Ant_farm_inf_main"
     ]
   },
   "mixins": [
-    "two_d_craft.mixins.json"
+    "ant_farm_inf.mixins.json"
   ],
   "depends": {
     "fabricloader": ">=0.15.7",

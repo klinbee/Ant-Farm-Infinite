@@ -3,8 +3,8 @@ plugins {
     id 'maven-publish'
 }
 
-version = project.mod_version
-group = project.maven_group
+group = 'net.quidvio'
+version = 'b1.0'
 
 repositories {
     // Add repositories to retrieve artifacts from in here.
@@ -15,7 +15,7 @@ repositories {
 }
 
 loom {
-    accessWidenerPath = file("src/main/resources/two_d_craft.accesswidener")
+    accessWidenerPath = file("src/main/resources/ant_farm_inf.accesswidener")
 }
 
 dependencies {

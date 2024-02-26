@@ -4,7 +4,7 @@
     "minecraft:spawner",
     "minecraft:chest",
     "minecraft:end_portal_frame",
-    "twodcraft:border_block",
+    "ant_farm_inf:border_block",
     "minecraft:reinforced_deepslate"
   ]
 }

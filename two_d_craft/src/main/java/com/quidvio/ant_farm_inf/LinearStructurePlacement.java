@@ -1,13 +1,6 @@
-package com.quidvio.two_d_craft;
+package com.quidvio.ant_farm_inf;
 
-import net.minecraft.util.math.Vec3i;
-import net.minecraft.world.gen.chunk.placement.StructurePlacement;
-import net.minecraft.world.gen.chunk.placement.StructurePlacementCalculator;
-import net.minecraft.world.gen.chunk.placement.StructurePlacementType;
-
-import java.util.Optional;
-
-/*
+/* TODO: This whole system lol
 public class LinearStructurePlacement extends StructurePlacement {
     protected LinearStructurePlacement(Vec3i locateOffset, FrequencyReductionMethod frequencyReductionMethod, float frequency, int salt, Optional<ExclusionZone> exclusionZone) {
         super(locateOffset, frequencyReductionMethod, frequency, salt, exclusionZone);

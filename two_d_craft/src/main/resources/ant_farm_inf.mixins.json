@@ -1,12 +1,11 @@
 {
   "required": true,
   "minVersion": "0.8",
-  "package": "com.quidvio.two_d_craft.mixin",
+  "package": "com.quidvio.ant_farm_inf.mixin",
   "compatibilityLevel": "JAVA_17",
   "mixins": [
     "MultifaceGrowthBlockMixin",
-    "ThreadedAnvilChunkStorageMixin",
-    "WorldPresetMixin"
+    "ThreadedAnvilChunkStorageMixin"
   ],
   "client": [
   ],

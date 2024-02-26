@@ -3,7 +3,7 @@
 // (powered by FernFlower decompiler)
 //
 
-package com.quidvio.two_d_craft;
+package com.quidvio.ant_farm_inf;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Suppliers;
@@ -22,7 +22,6 @@ import net.minecraft.registry.entry.RegistryEntryList;
 import net.minecraft.server.network.DebugInfoSender;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.structure.StructureSet;
-import net.minecraft.structure.StructureSets;
 import net.minecraft.structure.StructureStart;
 import net.minecraft.structure.StructureTemplateManager;
 import net.minecraft.util.Util;
@@ -35,7 +34,6 @@ import net.minecraft.util.math.random.ChunkRandom;
 import net.minecraft.util.math.random.RandomSeed;
 import net.minecraft.world.*;
 import net.minecraft.world.biome.Biome;
-import net.minecraft.world.biome.BuiltinBiomes;
 import net.minecraft.world.biome.GenerationSettings;
 import net.minecraft.world.biome.source.BiomeAccess;
 import net.minecraft.world.biome.source.BiomeCoords;
@@ -58,7 +56,6 @@ import net.minecraft.world.gen.densityfunction.DensityFunctionTypes;
 import net.minecraft.world.gen.densityfunction.DensityFunctions;
 import net.minecraft.world.gen.noise.NoiseConfig;
 import net.minecraft.world.gen.noise.NoiseRouter;
-import net.minecraft.world.gen.structure.BuriedTreasureStructure;
 import net.minecraft.world.gen.structure.Structure;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.jetbrains.annotations.Nullable;
@@ -76,7 +73,7 @@ public final class ChunkGenerator2D extends ChunkGenerator {
 
     static {
         AIR = Blocks.AIR.getDefaultState();
-        BORDER = Two_d_craft.BORDER_BLOCK.getDefaultState();
+        BORDER = Ant_farm_inf_main.BORDER_BLOCK.getDefaultState();
     }
 
     private static final BlockState AIR;

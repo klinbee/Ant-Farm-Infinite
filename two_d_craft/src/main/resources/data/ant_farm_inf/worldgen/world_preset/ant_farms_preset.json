@@ -3,7 +3,7 @@
     "minecraft:overworld": {
       "type": "minecraft:overworld",
       "generator": {
-        "type": "twodcraft:2d_gen",
+        "type": "ant_farm_inf:ant_farm_gen",
         "settings": "minecraft:overworld",
         "biome_source": {
           "type": "minecraft:multi_noise",
@@ -14,7 +14,7 @@
     "minecraft:the_nether": {
       "type": "minecraft:the_nether",
       "generator": {
-        "type": "twodcraft:2d_gen",
+        "type": "ant_farm_inf:ant_farm_gen",
         "settings": "minecraft:nether",
         "biome_source": {
           "type": "minecraft:multi_noise",
@@ -25,7 +25,7 @@
     "minecraft:the_end": {
       "type": "minecraft:the_end",
       "generator": {
-        "type": "twodcraft:2d_gen",
+        "type": "ant_farm_inf:ant_farm_gen",
         "settings": "minecraft:end",
         "biome_source": {
           "type": "minecraft:the_end"
