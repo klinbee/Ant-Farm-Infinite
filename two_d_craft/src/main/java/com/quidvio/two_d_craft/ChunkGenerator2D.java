@@ -664,77 +664,34 @@ public final class ChunkGenerator2D extends ChunkGenerator {
             while (var13.hasNext()) {
                 Map.Entry<StructurePlacement, Set<RegistryEntry<Structure>>> entry = (Map.Entry) var13.next();
                 StructurePlacement structurePlacement2 = (StructurePlacement) entry.getKey();
-                if (structurePlacement2 instanceof ConcentricRingsStructurePlacement) {
-                    ConcentricRingsStructurePlacement concentricRingsStructurePlacement = (ConcentricRingsStructurePlacement) structurePlacement2;
-                    Pair<BlockPos, RegistryEntry<Structure>> pair2 = this.locateConcentricRingsStructure((Set) entry.getValue(), world, structureAccessor, center, skipReferencedStructures, concentricRingsStructurePlacement);
-                    if (pair2 != null) {
-                        BlockPos blockPos = (BlockPos) pair2.getFirst();
-                        double e = center.getSquaredDistance(blockPos);
-                        if (e < d) {
-                            d = e;
-                            pair = pair2;
-                        }
-                    }
-                } else if (structurePlacement2 instanceof RandomSpreadStructurePlacement) {
                     list.add(entry);
                 }
-            }
 
             if (!list.isEmpty()) {
                 int i = ChunkSectionPos.getSectionCoord(center.getX());
                 int j = ChunkSectionPos.getSectionCoord(center.getZ());
 
-                for (int k = 0; k <= radius; ++k) {
-                    boolean bl = false;
-                    Iterator var30 = list.iterator();
+                boolean bl = false;
+                Iterator var30 = list.iterator();
 
-                    while (var30.hasNext()) {
-                        Map.Entry<StructurePlacement, Set<RegistryEntry<Structure>>> entry2 = (Map.Entry) var30.next();
-                        RandomSpreadStructurePlacement randomSpreadStructurePlacement = (RandomSpreadStructurePlacement) entry2.getKey();
-                        Pair<BlockPos, RegistryEntry<Structure>> pair3 = locateRandomSpreadStructure((Set) entry2.getValue(), world, structureAccessor, i, j, k, skipReferencedStructures, structurePlacementCalculator.getStructureSeed(), randomSpreadStructurePlacement);
-                        if (pair3 != null) {
-                            bl = true;
-                            double f = center.getSquaredDistance((Vec3i) pair3.getFirst());
-                            if (f < d) {
-                                d = f;
-                                pair = pair3;
-                            }
+                while (var30.hasNext()) {
+                    Map.Entry<StructurePlacement, Set<RegistryEntry<Structure>>> entry2 = (Map.Entry) var30.next();
+                    StructurePlacement structurePlacement = entry2.getKey();
+                    Pair<BlockPos, RegistryEntry<Structure>> pair3 = locateRandomSpreadStructure((Set) entry2.getValue(), world, structureAccessor, i, j, 1024, skipReferencedStructures, structurePlacementCalculator.getStructureSeed(), structurePlacement);
+                    if (pair3 != null) {
+                        bl = true;
+                        double f = center.getSquaredDistance((Vec3i) pair3.getFirst());
+                        if (f < d) {
+                            d = f;
+                            pair = pair3;
                         }
                     }
-
-                    if (bl) {
-                        return pair;
-                    }
                 }
-            }
 
-            return pair;
-        }
-    }
-
-    @Nullable
-    private Pair<BlockPos, RegistryEntry<Structure>> locateConcentricRingsStructure(Set<RegistryEntry<Structure>> structures, ServerWorld world, StructureAccessor structureAccessor, BlockPos center, boolean skipReferencedStructures, ConcentricRingsStructurePlacement placement) {
-        List<ChunkPos> list = world.getChunkManager().getStructurePlacementCalculator().getPlacementPositions(placement);
-        if (list == null) {
-            throw new IllegalStateException("Somehow tried to find structures for a placement that doesn't exist");
-        } else {
-            Pair<BlockPos, RegistryEntry<Structure>> pair = null;
-            double d = 1.7976931348623157E308D;
-            BlockPos.Mutable mutable = new BlockPos.Mutable();
-            Iterator var12 = list.iterator();
-
-            while (var12.hasNext()) {
-                ChunkPos chunkPos = (ChunkPos) var12.next();
-                mutable.set(ChunkSectionPos.getOffsetPos(chunkPos.x, 8), 32, ChunkSectionPos.getOffsetPos(chunkPos.z, 8));
-                double e = mutable.getSquaredDistance(center);
-                boolean bl = pair == null || e < d;
                 if (bl) {
-                    Pair<BlockPos, RegistryEntry<Structure>> pair2 = locateStructure(structures, world, structureAccessor, skipReferencedStructures, placement, chunkPos);
-                    if (pair2 != null) {
-                        pair = pair2;
-                        d = e;
-                    }
+                    return pair;
                 }
+
             }
 
             return pair;
@@ -742,33 +699,29 @@ public final class ChunkGenerator2D extends ChunkGenerator {
     }
 
     @Nullable
-    private static Pair<BlockPos, RegistryEntry<Structure>> locateRandomSpreadStructure(Set<RegistryEntry<Structure>> structures, WorldView world, StructureAccessor structureAccessor, int centerChunkX, int centerChunkZ, int radius, boolean skipReferencedStructures, long seed, RandomSpreadStructurePlacement placement) {
-        int i = placement.getSpacing();
-
-        for (int j = -radius; j <= radius; ++j) {
-            boolean bl = j == -radius || j == radius;
-
-            for (int k = -radius; k <= radius; ++k) {
-                boolean bl2 = k == -radius || k == radius;
-                if (bl || bl2) {
-                    int l = centerChunkX + i * j;
-                    int m = centerChunkZ + i * k;
-                    ChunkPos chunkPos = placement.getStartChunk(seed, l, m);
-                    Pair<BlockPos, RegistryEntry<Structure>> pair = locateStructure(structures, world, structureAccessor, skipReferencedStructures, placement, chunkPos);
-                    if (pair != null) {
-                        return pair;
-                    }
+    private static Pair<BlockPos, RegistryEntry<Structure>> locateRandomSpreadStructure(Set<RegistryEntry<Structure>> structures, WorldView world, StructureAccessor structureAccessor, int centerChunkX, int centerChunkZ, int zMax, boolean skipReferencedStructures, long seed, StructurePlacement placement) {
+        placement.
+        int k = 0;
+        while (k <= zMax) {
+            int j = 0;
+            while (j <= (maxChunkDistFromXAxis + structureChunkDistanceFlexibility)) {
+                Pair<BlockPos, RegistryEntry<Structure>> pair = locateStructure(structures, world, structureAccessor, skipReferencedStructures, placement, new ChunkPos(centerChunkX + j, centerChunkZ + k));
+                if (pair != null) {
+                    return pair;
                 }
+                j = j >= 0 ? -j - 1 : -j;
             }
+            k = k >= 0 ? -k - 1 : -k;
         }
-
         return null;
     }
 
     @Nullable
     private static Pair<BlockPos, RegistryEntry<Structure>> locateStructure(Set<RegistryEntry<Structure>> structures, WorldView world, StructureAccessor structureAccessor, boolean skipReferencedStructures, StructurePlacement placement, ChunkPos pos) {
         Iterator var6 = structures.iterator();
-        if (Math.abs(pos.x) <= maxChunkDistFromXAxis + structureChunkDistanceFlexibility) {
+        System.out.println(pos.x + " " + pos.z);
+        if (Math.abs(pos.x) <= maxChunkDistFromXAxis + structureChunkDistanceFlexibility + 2) {
+            //System.out.println("looking");
             RegistryEntry registryEntry;
             StructureStart structureStart;
             do {
@@ -796,6 +749,7 @@ public final class ChunkGenerator2D extends ChunkGenerator {
 
             return Pair.of(placement.getLocatePos(structureStart.getPos()), registryEntry);
         }
+        //System.out.println("nope");
         return null;
     }
 
