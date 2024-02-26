@@ -5,7 +5,6 @@
     "minecraft:large_biomes",
     "minecraft:amplified",
     "minecraft:single_biome_surface",
-    "twodcraft:twodcraft",
-    "wikiexample:void_world"
+    "twodcraft:twodcraft"
   ]
 }

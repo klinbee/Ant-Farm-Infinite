@@ -91,6 +91,7 @@ public final class ChunkGenerator2D extends ChunkGenerator {
     /**
      * Constructor
      * Added defaultGen setter and field for utility.
+     *
      * @param biomeSource
      * @param settings
      */
@@ -105,6 +106,7 @@ public final class ChunkGenerator2D extends ChunkGenerator {
 
     /**
      * TODO: Unsure if needed
+     *
      * @param settings
      * @return
      */
@@ -120,6 +122,7 @@ public final class ChunkGenerator2D extends ChunkGenerator {
 
     /**
      * TODO: Unsure if needed
+     *
      * @param executor
      * @param noiseConfig
      * @param blender
@@ -136,6 +139,7 @@ public final class ChunkGenerator2D extends ChunkGenerator {
 
     /**
      * Needed for populateBiomes.
+     *
      * @param blender
      * @param noiseConfig
      * @param structureAccessor
@@ -151,6 +155,7 @@ public final class ChunkGenerator2D extends ChunkGenerator {
 
     /**
      * Needed for populateBiomes, populateBiomes.
+     *
      * @param chunk
      * @param world
      * @param blender
@@ -163,6 +168,7 @@ public final class ChunkGenerator2D extends ChunkGenerator {
 
     /**
      * Needed for Inheritance.
+     *
      * @return
      */
     @Override
@@ -172,6 +178,7 @@ public final class ChunkGenerator2D extends ChunkGenerator {
 
     /**
      * Used by various functions.
+     *
      * @return
      */
     public RegistryEntry<ChunkGeneratorSettings> getSettings() {
@@ -180,6 +187,7 @@ public final class ChunkGenerator2D extends ChunkGenerator {
 
     /**
      * Used by various functions.
+     *
      * @return
      */
     public BiomeSource getBiomeSource() {
@@ -188,6 +196,7 @@ public final class ChunkGenerator2D extends ChunkGenerator {
 
     /**
      * TODO: Unsure if needed
+     *
      * @param settings
      * @return
      */
@@ -197,6 +206,7 @@ public final class ChunkGenerator2D extends ChunkGenerator {
 
     /**
      * Needed for Inheritance.
+     *
      * @param x
      * @param z
      * @param heightmap
@@ -211,6 +221,7 @@ public final class ChunkGenerator2D extends ChunkGenerator {
 
     /**
      * Needed for Inheritance.
+     *
      * @param x
      * @param z
      * @param world
@@ -226,6 +237,7 @@ public final class ChunkGenerator2D extends ChunkGenerator {
 
     /**
      * Needed for Inheritance.
+     *
      * @param text
      * @param noiseConfig
      * @param pos
@@ -242,6 +254,7 @@ public final class ChunkGenerator2D extends ChunkGenerator {
 
     /**
      * Used by various functions.
+     *
      * @param world
      * @param noiseConfig
      * @param x
@@ -311,6 +324,7 @@ public final class ChunkGenerator2D extends ChunkGenerator {
 
     /**
      * Uses horizontal limiting (chunkPos < maxDist)
+     *
      * @param region
      * @param structures
      * @param noiseConfig
@@ -337,6 +351,7 @@ public final class ChunkGenerator2D extends ChunkGenerator {
 
     /**
      * Uses defaultGen to generate carvers, as it needs to be a NoiseChunkGenerator.
+     *
      * @return
      */
     @Override
@@ -381,7 +396,7 @@ public final class ChunkGenerator2D extends ChunkGenerator {
      * Placing terrain
      * Inside of maxChunkDistFromXAxis is default terrain.
      * Outside is just border blocks.
-     *
+     * <p>
      * Uses horizontal limiting (chunkPos < maxDist)
      *
      * @param executor
@@ -440,6 +455,7 @@ public final class ChunkGenerator2D extends ChunkGenerator {
 
     /**
      * Needed for populateNoise.
+     *
      * @param blender
      * @param structureAccessor
      * @param noiseConfig
@@ -522,6 +538,7 @@ public final class ChunkGenerator2D extends ChunkGenerator {
 
     /**
      * TODO: Unsure if needed
+     *
      * @param chunkNoiseSampler
      * @param x
      * @param y
@@ -535,6 +552,7 @@ public final class ChunkGenerator2D extends ChunkGenerator {
 
     /**
      * Needed for Inheritance.
+     *
      * @return
      */
     @Override
@@ -544,6 +562,7 @@ public final class ChunkGenerator2D extends ChunkGenerator {
 
     /**
      * Needed for Inheritance.
+     *
      * @return
      */
     @Override
@@ -553,6 +572,7 @@ public final class ChunkGenerator2D extends ChunkGenerator {
 
     /**
      * Needed for Inheritance.
+     *
      * @return
      */
     @Override
@@ -562,6 +582,7 @@ public final class ChunkGenerator2D extends ChunkGenerator {
 
     /**
      * Needed for Inheritance.
+     *
      * @param region
      */
     @Override
@@ -577,6 +598,7 @@ public final class ChunkGenerator2D extends ChunkGenerator {
 
     /**
      * Uses horizontal limiting (chunkPos < maxDist)
+     *
      * @param world
      * @param chunk
      * @param structureAccessor
@@ -590,8 +612,9 @@ public final class ChunkGenerator2D extends ChunkGenerator {
 
     /**
      * Noise config made from placement calculator is blank = only river biome structures generate.
-     * Identical to default, but overriding for the purpose of using the local trySetStructureStart method.
-     *
+     * Additionally I made my own random for generating the structure locations using their system.
+     * However, this sucks.
+     * <p>
      * Uses horizontal limiting (chunkPos < maxDist)
      *
      * @param registryManager
@@ -612,7 +635,10 @@ public final class ChunkGenerator2D extends ChunkGenerator {
                 } else {
                     Random rand = new Random();
                     int spacing = rand.nextInt(40) + 14;
-                    placement = new RandomSpreadStructurePlacement(new Vec3i(0, 0, 0), placement.getFrequencyReductionMethod(), 0.75F, placement.getSalt(), Optional.empty(), spacing, spacing - 1, SpreadType.LINEAR);
+                    placement = new RandomSpreadStructurePlacement(new Vec3i(0, 0, 0), placement.getFrequencyReductionMethod(), 0.8F, placement.getSalt(), Optional.empty(), spacing, spacing - 2, SpreadType.LINEAR);
+                }
+                if (chunk.getPos().z == 0) {
+                    placement = new RandomSpreadStructurePlacement(new Vec3i(0, 0, 0), placement.getFrequencyReductionMethod(), 0.0F, 0, Optional.empty(), 1, 0, SpreadType.LINEAR);
                 }
                 StructurePlacement structurePlacement = placement;
                 List<StructureSet.WeightedEntry> list = ((StructureSet) structureSet.value()).structures();
@@ -768,6 +794,7 @@ public final class ChunkGenerator2D extends ChunkGenerator {
      * TODO: Fix later this sucks
      * Added to change how searching works to accomodate for strongholds mainly... it sucks. Need to make my own rng system and structure placement.
      * No more concentric rings structure searching.
+     *
      * @param world
      * @param structures
      * @param center
@@ -805,8 +832,8 @@ public final class ChunkGenerator2D extends ChunkGenerator {
             while (var13.hasNext()) {
                 Map.Entry<StructurePlacement, Set<RegistryEntry<Structure>>> entry = (Map.Entry) var13.next();
                 StructurePlacement structurePlacement2 = (StructurePlacement) entry.getKey();
-                    list.add(entry);
-                }
+                list.add(entry);
+            }
 
             if (!list.isEmpty()) {
                 int i = ChunkSectionPos.getSectionCoord(center.getX());
@@ -842,7 +869,7 @@ public final class ChunkGenerator2D extends ChunkGenerator {
     /**
      * The search alg that is okay, it does it's job.
      * Basic BFS
-     *
+     * <p>
      * Uses horizontal limiting (chunkPos < maxDist)
      *
      * @param structures
@@ -875,6 +902,7 @@ public final class ChunkGenerator2D extends ChunkGenerator {
 
     /**
      * Needed for locateRandomSpreadStructure.
+     *
      * @param structures
      * @param world
      * @param structureAccessor
@@ -916,6 +944,7 @@ public final class ChunkGenerator2D extends ChunkGenerator {
 
     /**
      * Needed for locateRandomSpreadStructure, locateStructure.
+     *
      * @param structureAccessor
      * @param start
      * @return
