@@ -8,8 +8,11 @@ package com.quidvio.two_d_craft;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.Sets;
+import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
+import it.unimi.dsi.fastutil.objects.ObjectArraySet;
 import net.minecraft.SharedConstants;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
@@ -17,6 +20,7 @@ import net.minecraft.registry.*;
 import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.registry.entry.RegistryEntryList;
 import net.minecraft.server.network.DebugInfoSender;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.structure.StructureSet;
 import net.minecraft.structure.StructureSets;
 import net.minecraft.structure.StructureStart;
@@ -25,10 +29,7 @@ import net.minecraft.util.Util;
 import net.minecraft.util.crash.CrashException;
 import net.minecraft.util.crash.CrashReport;
 import net.minecraft.util.crash.CrashReportSection;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.ChunkPos;
-import net.minecraft.util.math.ChunkSectionPos;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.*;
 import net.minecraft.util.math.random.CheckedRandom;
 import net.minecraft.util.math.random.ChunkRandom;
 import net.minecraft.util.math.random.RandomSeed;
@@ -41,10 +42,7 @@ import net.minecraft.world.biome.source.BiomeCoords;
 import net.minecraft.world.biome.source.BiomeSource;
 import net.minecraft.world.biome.source.BiomeSupplier;
 import net.minecraft.world.biome.source.util.MultiNoiseUtil;
-import net.minecraft.world.chunk.BelowZeroRetrogen;
-import net.minecraft.world.chunk.Chunk;
-import net.minecraft.world.chunk.ChunkSection;
-import net.minecraft.world.chunk.ProtoChunk;
+import net.minecraft.world.chunk.*;
 import net.minecraft.world.dimension.DimensionType;
 import net.minecraft.world.gen.GenerationStep;
 import net.minecraft.world.gen.HeightContext;
@@ -54,13 +52,13 @@ import net.minecraft.world.gen.carver.CarverContext;
 import net.minecraft.world.gen.carver.CarvingMask;
 import net.minecraft.world.gen.carver.ConfiguredCarver;
 import net.minecraft.world.gen.chunk.*;
-import net.minecraft.world.gen.chunk.placement.StructurePlacement;
-import net.minecraft.world.gen.chunk.placement.StructurePlacementCalculator;
+import net.minecraft.world.gen.chunk.placement.*;
 import net.minecraft.world.gen.densityfunction.DensityFunction;
 import net.minecraft.world.gen.densityfunction.DensityFunctionTypes;
 import net.minecraft.world.gen.densityfunction.DensityFunctions;
 import net.minecraft.world.gen.noise.NoiseConfig;
 import net.minecraft.world.gen.noise.NoiseRouter;
+import net.minecraft.world.gen.structure.BuriedTreasureStructure;
 import net.minecraft.world.gen.structure.Structure;
 import org.apache.commons.lang3.mutable.MutableObject;
 import org.jetbrains.annotations.Nullable;
@@ -74,16 +72,14 @@ import java.util.function.Supplier;
 
 public final class ChunkGenerator2D extends ChunkGenerator {
 
-    public static final Codec<ChunkGenerator2D> CODEC = RecordCodecBuilder.create((instance) -> instance.group(BiomeSource.CODEC.fieldOf("biome_source").forGetter(ChunkGenerator2D::getBiomeSource), ChunkGeneratorSettings.REGISTRY_CODEC.fieldOf("settings").forGetter(ChunkGenerator2D::getSettings), RegistryCodecs.entryList(RegistryKeys.STRUCTURE_SET).fieldOf("structure_overrides").forGetter(ChunkGenerator2D::getStructureSetOverride)).apply(instance, instance.stable(ChunkGenerator2D::new)));
+    public static final Codec<ChunkGenerator2D> CODEC = RecordCodecBuilder.create((instance) -> instance.group(BiomeSource.CODEC.fieldOf("biome_source").forGetter(ChunkGenerator2D::getBiomeSource), ChunkGeneratorSettings.REGISTRY_CODEC.fieldOf("settings").forGetter(ChunkGenerator2D::getSettings)).apply(instance, instance.stable(ChunkGenerator2D::new)));
 
     static {
         AIR = Blocks.AIR.getDefaultState();
-        BARRIER = Blocks.BARRIER.getDefaultState();
         BORDER = Two_d_craft.BORDER_BLOCK.getDefaultState();
     }
 
     private static final BlockState AIR;
-    private static final BlockState BARRIER;
     private static final BlockState BORDER;
     private static final int maxChunkDistFromXAxis = 0;
     private static final int structureChunkDistanceFlexibility = 2;
@@ -91,17 +87,14 @@ public final class ChunkGenerator2D extends ChunkGenerator {
     private final RegistryEntry<ChunkGeneratorSettings> settings;
     private final Supplier<AquiferSampler.FluidLevelSampler> fluidLevelSampler;
     private final BiomeSource biomeSource;
-    private final RegistryEntryList<StructureSet> structureSetOverride;
-    public int i = 0;
 
     /**
      * Added defaultGen for utility.
      */
-    public ChunkGenerator2D(BiomeSource biomeSource, RegistryEntry<ChunkGeneratorSettings> settings, RegistryEntryList<StructureSet> structureSetOverride) {
+    public ChunkGenerator2D(BiomeSource biomeSource, RegistryEntry<ChunkGeneratorSettings> settings) {
         super(biomeSource);
         this.settings = settings;
         this.biomeSource = biomeSource;
-        this.structureSetOverride = structureSetOverride;
         this.defaultGen = new NoiseChunkGenerator(biomeSource, settings);
         this.fluidLevelSampler = Suppliers.memoize(() -> {
             return createFluidLevelSampler((ChunkGeneratorSettings) settings.value());
@@ -151,8 +144,6 @@ public final class ChunkGenerator2D extends ChunkGenerator {
     public BiomeSource getBiomeSource() {
         return this.biomeSource;
     }
-
-    public RegistryEntryList<StructureSet> getStructureSetOverride() {return this.structureSetOverride;}
 
     public boolean matchesSettings(RegistryKey<ChunkGeneratorSettings> settings) {
         return this.settings.matchesKey(settings);
@@ -352,8 +343,8 @@ public final class ChunkGenerator2D extends ChunkGenerator {
             for (int k = 0; k < 16; ++k) {
                 for (int l = 0; l < 16; ++l) {
                     chunk.setBlockState(mutable.set(k, j, l), BORDER, false);
-                    heightmap.trackUpdate(k, j, l, BARRIER);
-                    heightmap2.trackUpdate(k, j, l, BARRIER);
+                    heightmap.trackUpdate(k, j, l, BORDER);
+                    heightmap2.trackUpdate(k, j, l, BORDER);
                 }
             }
         }
@@ -485,13 +476,24 @@ public final class ChunkGenerator2D extends ChunkGenerator {
             ChunkPos chunkPos = chunk.getPos();
             ChunkSectionPos chunkSectionPos = ChunkSectionPos.from(chunk);
             NoiseConfig noiseConfig = placementCalculator.getNoiseConfig();
-            structureSetOverride.forEach((structureSet) -> {
-                StructurePlacement structurePlacement = ((StructureSet) structureSet.value()).placement();
+            placementCalculator.getStructureSets().forEach((structureSet) -> {
+                StructurePlacement placement = structureSet.value().placement();
+                if (placement instanceof ConcentricRingsStructurePlacement crsp) {
+                    placement = new RandomSpreadStructurePlacement(new Vec3i(0, 0, 0), crsp.getFrequencyReductionMethod(), 1.0F, crsp.getSalt(), Optional.empty(), 125, 123, SpreadType.LINEAR);
+                } else {
+                    Random rand = new Random();
+                    int spacing = rand.nextInt(40) + 14;
+                    placement = new RandomSpreadStructurePlacement(new Vec3i(0, 0, 0), placement.getFrequencyReductionMethod(), 0.75F, placement.getSalt(), Optional.empty(), spacing, spacing - 1, SpreadType.LINEAR);
+                }
+                StructurePlacement structurePlacement = placement;
                 List<StructureSet.WeightedEntry> list = ((StructureSet) structureSet.value()).structures();
                 Iterator var12 = list.iterator();
 
                 while (var12.hasNext()) {
                     StructureSet.WeightedEntry weightedEntry = (StructureSet.WeightedEntry) var12.next();
+                    if (chunk.getPos().x == 0 && weightedEntry.structure().value().toString().contains("BuriedTreasure")) {
+                        structurePlacement = new RandomSpreadStructurePlacement(new Vec3i(9, 0, 9), placement.getFrequencyReductionMethod(), 0.5F, placement.getSalt(), Optional.empty(), 1, 0, SpreadType.LINEAR);
+                    }
                     StructureStart structureStart = structureAccessor.getStructureStart(chunkSectionPos, (Structure) weightedEntry.structure().value(), chunk);
                     if (structureStart != null && structureStart.hasChildren()) {
                         return;
@@ -630,6 +632,179 @@ public final class ChunkGenerator2D extends ChunkGenerator {
                 }
             }
         }
+    }
 
+    @Nullable
+    public Pair<BlockPos, RegistryEntry<Structure>> locateStructure(ServerWorld world, RegistryEntryList<Structure> structures, BlockPos center, int radius, boolean skipReferencedStructures) {
+        StructurePlacementCalculator structurePlacementCalculator = world.getChunkManager().getStructurePlacementCalculator();
+        Map<StructurePlacement, Set<RegistryEntry<Structure>>> map = new Object2ObjectArrayMap();
+        Iterator var8 = structures.iterator();
+
+        while (var8.hasNext()) {
+            RegistryEntry<Structure> registryEntry = (RegistryEntry) var8.next();
+            Iterator var10 = structurePlacementCalculator.getPlacements(registryEntry).iterator();
+
+            while (var10.hasNext()) {
+                StructurePlacement structurePlacement = (StructurePlacement) var10.next();
+                ((Set) map.computeIfAbsent(structurePlacement, (placement) -> {
+                    return new ObjectArraySet();
+                })).add(registryEntry);
+            }
+        }
+
+        if (map.isEmpty()) {
+            return null;
+        } else {
+            Pair<BlockPos, RegistryEntry<Structure>> pair = null;
+            double d = 1.7976931348623157E308D;
+            StructureAccessor structureAccessor = world.getStructureAccessor();
+            List<Map.Entry<StructurePlacement, Set<RegistryEntry<Structure>>>> list = new ArrayList(map.size());
+            Iterator var13 = map.entrySet().iterator();
+
+            while (var13.hasNext()) {
+                Map.Entry<StructurePlacement, Set<RegistryEntry<Structure>>> entry = (Map.Entry) var13.next();
+                StructurePlacement structurePlacement2 = (StructurePlacement) entry.getKey();
+                if (structurePlacement2 instanceof ConcentricRingsStructurePlacement) {
+                    ConcentricRingsStructurePlacement concentricRingsStructurePlacement = (ConcentricRingsStructurePlacement) structurePlacement2;
+                    Pair<BlockPos, RegistryEntry<Structure>> pair2 = this.locateConcentricRingsStructure((Set) entry.getValue(), world, structureAccessor, center, skipReferencedStructures, concentricRingsStructurePlacement);
+                    if (pair2 != null) {
+                        BlockPos blockPos = (BlockPos) pair2.getFirst();
+                        double e = center.getSquaredDistance(blockPos);
+                        if (e < d) {
+                            d = e;
+                            pair = pair2;
+                        }
+                    }
+                } else if (structurePlacement2 instanceof RandomSpreadStructurePlacement) {
+                    list.add(entry);
+                }
+            }
+
+            if (!list.isEmpty()) {
+                int i = ChunkSectionPos.getSectionCoord(center.getX());
+                int j = ChunkSectionPos.getSectionCoord(center.getZ());
+
+                for (int k = 0; k <= radius; ++k) {
+                    boolean bl = false;
+                    Iterator var30 = list.iterator();
+
+                    while (var30.hasNext()) {
+                        Map.Entry<StructurePlacement, Set<RegistryEntry<Structure>>> entry2 = (Map.Entry) var30.next();
+                        RandomSpreadStructurePlacement randomSpreadStructurePlacement = (RandomSpreadStructurePlacement) entry2.getKey();
+                        Pair<BlockPos, RegistryEntry<Structure>> pair3 = locateRandomSpreadStructure((Set) entry2.getValue(), world, structureAccessor, i, j, k, skipReferencedStructures, structurePlacementCalculator.getStructureSeed(), randomSpreadStructurePlacement);
+                        if (pair3 != null) {
+                            bl = true;
+                            double f = center.getSquaredDistance((Vec3i) pair3.getFirst());
+                            if (f < d) {
+                                d = f;
+                                pair = pair3;
+                            }
+                        }
+                    }
+
+                    if (bl) {
+                        return pair;
+                    }
+                }
+            }
+
+            return pair;
+        }
+    }
+
+    @Nullable
+    private Pair<BlockPos, RegistryEntry<Structure>> locateConcentricRingsStructure(Set<RegistryEntry<Structure>> structures, ServerWorld world, StructureAccessor structureAccessor, BlockPos center, boolean skipReferencedStructures, ConcentricRingsStructurePlacement placement) {
+        List<ChunkPos> list = world.getChunkManager().getStructurePlacementCalculator().getPlacementPositions(placement);
+        if (list == null) {
+            throw new IllegalStateException("Somehow tried to find structures for a placement that doesn't exist");
+        } else {
+            Pair<BlockPos, RegistryEntry<Structure>> pair = null;
+            double d = 1.7976931348623157E308D;
+            BlockPos.Mutable mutable = new BlockPos.Mutable();
+            Iterator var12 = list.iterator();
+
+            while (var12.hasNext()) {
+                ChunkPos chunkPos = (ChunkPos) var12.next();
+                mutable.set(ChunkSectionPos.getOffsetPos(chunkPos.x, 8), 32, ChunkSectionPos.getOffsetPos(chunkPos.z, 8));
+                double e = mutable.getSquaredDistance(center);
+                boolean bl = pair == null || e < d;
+                if (bl) {
+                    Pair<BlockPos, RegistryEntry<Structure>> pair2 = locateStructure(structures, world, structureAccessor, skipReferencedStructures, placement, chunkPos);
+                    if (pair2 != null) {
+                        pair = pair2;
+                        d = e;
+                    }
+                }
+            }
+
+            return pair;
+        }
+    }
+
+    @Nullable
+    private static Pair<BlockPos, RegistryEntry<Structure>> locateRandomSpreadStructure(Set<RegistryEntry<Structure>> structures, WorldView world, StructureAccessor structureAccessor, int centerChunkX, int centerChunkZ, int radius, boolean skipReferencedStructures, long seed, RandomSpreadStructurePlacement placement) {
+        int i = placement.getSpacing();
+
+        for (int j = -radius; j <= radius; ++j) {
+            boolean bl = j == -radius || j == radius;
+
+            for (int k = -radius; k <= radius; ++k) {
+                boolean bl2 = k == -radius || k == radius;
+                if (bl || bl2) {
+                    int l = centerChunkX + i * j;
+                    int m = centerChunkZ + i * k;
+                    ChunkPos chunkPos = placement.getStartChunk(seed, l, m);
+                    Pair<BlockPos, RegistryEntry<Structure>> pair = locateStructure(structures, world, structureAccessor, skipReferencedStructures, placement, chunkPos);
+                    if (pair != null) {
+                        return pair;
+                    }
+                }
+            }
+        }
+
+        return null;
+    }
+
+    @Nullable
+    private static Pair<BlockPos, RegistryEntry<Structure>> locateStructure(Set<RegistryEntry<Structure>> structures, WorldView world, StructureAccessor structureAccessor, boolean skipReferencedStructures, StructurePlacement placement, ChunkPos pos) {
+        Iterator var6 = structures.iterator();
+        if (Math.abs(pos.x) <= maxChunkDistFromXAxis + structureChunkDistanceFlexibility) {
+            RegistryEntry registryEntry;
+            StructureStart structureStart;
+            do {
+                do {
+                    do {
+                        StructurePresence structurePresence;
+                        do {
+                            if (!var6.hasNext()) {
+                                return null;
+                            }
+
+                            registryEntry = (RegistryEntry) var6.next();
+                            structurePresence = structureAccessor.getStructurePresence(pos, (Structure) registryEntry.value(), skipReferencedStructures);
+                        } while (structurePresence == StructurePresence.START_NOT_PRESENT);
+
+                        if (!skipReferencedStructures && structurePresence == StructurePresence.START_PRESENT) {
+                            return Pair.of(placement.getLocatePos(pos), registryEntry);
+                        }
+
+                        Chunk chunk = world.getChunk(pos.x, pos.z, ChunkStatus.STRUCTURE_STARTS);
+                        structureStart = structureAccessor.getStructureStart(ChunkSectionPos.from(chunk), (Structure) registryEntry.value(), chunk);
+                    } while (structureStart == null);
+                } while (!structureStart.hasChildren());
+            } while (skipReferencedStructures && !checkNotReferenced(structureAccessor, structureStart));
+
+            return Pair.of(placement.getLocatePos(structureStart.getPos()), registryEntry);
+        }
+        return null;
+    }
+
+    private static boolean checkNotReferenced(StructureAccessor structureAccessor, StructureStart start) {
+        if (start.isNeverReferenced()) {
+            structureAccessor.incrementReferences(start);
+            return true;
+        } else {
+            return false;
+        }
     }
 }
