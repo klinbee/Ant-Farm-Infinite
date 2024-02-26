@@ -81,28 +81,33 @@ public final class ChunkGenerator2D extends ChunkGenerator {
 
     private static final BlockState AIR;
     private static final BlockState BORDER;
-    private static final int maxChunkDistFromXAxis = 0;
-    private static final int structureChunkDistanceFlexibility = 2;
+    private static final int maxChunkDistFromXAxis = 0; // The max distance, in chunks, the world will generate away from the x-axis.
+    private static final int structureChunkDistanceFlexibility = 2; // The max distance, in chunks, the world will generate structures outside of the region.
     public NoiseChunkGenerator defaultGen;
     private final RegistryEntry<ChunkGeneratorSettings> settings;
     private final Supplier<AquiferSampler.FluidLevelSampler> fluidLevelSampler;
     private final BiomeSource biomeSource;
 
     /**
-     * Added defaultGen for utility.
+     * Constructor
+     * Added defaultGen setter and field for utility.
+     * @param biomeSource
+     * @param settings
      */
     public ChunkGenerator2D(BiomeSource biomeSource, RegistryEntry<ChunkGeneratorSettings> settings) {
         super(biomeSource);
         this.settings = settings;
         this.biomeSource = biomeSource;
         this.defaultGen = new NoiseChunkGenerator(biomeSource, settings);
-        this.fluidLevelSampler = Suppliers.memoize(() -> {
-            return createFluidLevelSampler((ChunkGeneratorSettings) settings.value());
-        });
+        this.fluidLevelSampler = Suppliers.memoize(() -> createFluidLevelSampler((ChunkGeneratorSettings) settings.value()));
 
     }
 
-
+    /**
+     * TODO: Unsure if needed
+     * @param settings
+     * @return
+     */
     private static AquiferSampler.FluidLevelSampler createFluidLevelSampler(ChunkGeneratorSettings settings) {
         AquiferSampler.FluidLevel fluidLevel = new AquiferSampler.FluidLevel(-54, Blocks.LAVA.getDefaultState());
         int i = settings.seaLevel();
@@ -113,6 +118,15 @@ public final class ChunkGenerator2D extends ChunkGenerator {
         };
     }
 
+    /**
+     * TODO: Unsure if needed
+     * @param executor
+     * @param noiseConfig
+     * @param blender
+     * @param structureAccessor
+     * @param chunk
+     * @return
+     */
     public CompletableFuture<Chunk> populateBiomes(Executor executor, NoiseConfig noiseConfig, Blender blender, StructureAccessor structureAccessor, Chunk chunk) {
         return CompletableFuture.supplyAsync(Util.debugSupplier("init_biomes", () -> {
             this.populateBiomes(blender, noiseConfig, structureAccessor, chunk);
@@ -120,6 +134,13 @@ public final class ChunkGenerator2D extends ChunkGenerator {
         }), Util.getMainWorkerExecutor());
     }
 
+    /**
+     * Needed for populateBiomes.
+     * @param blender
+     * @param noiseConfig
+     * @param structureAccessor
+     * @param chunk
+     */
     private void populateBiomes(Blender blender, NoiseConfig noiseConfig, StructureAccessor structureAccessor, Chunk chunk) {
         ChunkNoiseSampler chunkNoiseSampler = chunk.getOrCreateChunkNoiseSampler((chunkx) -> {
             return this.createChunkNoiseSampler(chunkx, structureAccessor, blender, noiseConfig);
@@ -128,34 +149,74 @@ public final class ChunkGenerator2D extends ChunkGenerator {
         chunk.populateBiomes(biomeSupplier, chunkNoiseSampler.createMultiNoiseSampler(noiseConfig.getNoiseRouter(), new ArrayList<MultiNoiseUtil.NoiseHypercube>()));
     }
 
+    /**
+     * Needed for populateBiomes, populateBiomes.
+     * @param chunk
+     * @param world
+     * @param blender
+     * @param noiseConfig
+     * @return
+     */
     private ChunkNoiseSampler createChunkNoiseSampler(Chunk chunk, StructureAccessor world, Blender blender, NoiseConfig noiseConfig) {
         return ChunkNoiseSampler.create(chunk, noiseConfig, StructureWeightSampler.createStructureWeightSampler(world, chunk.getPos()), (ChunkGeneratorSettings) this.settings.value(), (AquiferSampler.FluidLevelSampler) this.fluidLevelSampler.get(), blender);
     }
 
+    /**
+     * Needed for Inheritance.
+     * @return
+     */
     @Override
     protected Codec<? extends ChunkGenerator> getCodec() {
         return CODEC;
     }
 
+    /**
+     * Used by various functions.
+     * @return
+     */
     public RegistryEntry<ChunkGeneratorSettings> getSettings() {
         return this.settings;
     }
 
+    /**
+     * Used by various functions.
+     * @return
+     */
     public BiomeSource getBiomeSource() {
         return this.biomeSource;
     }
 
+    /**
+     * TODO: Unsure if needed
+     * @param settings
+     * @return
+     */
     public boolean matchesSettings(RegistryKey<ChunkGeneratorSettings> settings) {
         return this.settings.matchesKey(settings);
     }
 
-    /* this method returns the height of the terrain at a given coordinate. it's used for structure generation */
+    /**
+     * Needed for Inheritance.
+     * @param x
+     * @param z
+     * @param heightmap
+     * @param world
+     * @param noiseConfig
+     * @return
+     */
     @Override
     public int getHeight(int x, int z, Heightmap.Type heightmap, HeightLimitView world, NoiseConfig noiseConfig) {
         return this.sampleHeightmap(world, noiseConfig, x, z, (MutableObject) null, heightmap.getBlockPredicate()).orElse(world.getBottomY());
     }
 
-    /* this method returns a "core sample" of the world at a given coordinate. it's used for structure generation */
+    /**
+     * Needed for Inheritance.
+     * @param x
+     * @param z
+     * @param world
+     * @param noiseConfig
+     * @return
+     */
     @Override
     public VerticalBlockSample getColumnSample(int x, int z, HeightLimitView world, NoiseConfig noiseConfig) {
         MutableObject<VerticalBlockSample> mutableObject = new MutableObject();
@@ -163,7 +224,12 @@ public final class ChunkGenerator2D extends ChunkGenerator {
         return (VerticalBlockSample) mutableObject.getValue();
     }
 
-    /* this method adds text to the f3 menu. for NoiseChunkGenerator, it's the NoiseRouter line */
+    /**
+     * Needed for Inheritance.
+     * @param text
+     * @param noiseConfig
+     * @param pos
+     */
     @Override
     public void getDebugHudText(List<String> text, NoiseConfig noiseConfig, BlockPos pos) {
         DecimalFormat decimalFormat = new DecimalFormat("0.000");
@@ -174,6 +240,16 @@ public final class ChunkGenerator2D extends ChunkGenerator {
         text.add("NoiseRouter T: " + var10001 + " V: " + decimalFormat.format(noiseRouter.vegetation().sample(unblendedNoisePos)) + " C: " + decimalFormat.format(noiseRouter.continents().sample(unblendedNoisePos)) + " E: " + decimalFormat.format(noiseRouter.erosion().sample(unblendedNoisePos)) + " D: " + decimalFormat.format(noiseRouter.depth().sample(unblendedNoisePos)) + " W: " + decimalFormat.format(d) + " PV: " + decimalFormat.format((double) DensityFunctions.getPeaksValleysNoise((float) d)) + " AS: " + decimalFormat.format(noiseRouter.initialDensityWithoutJaggedness().sample(unblendedNoisePos)) + " N: " + decimalFormat.format(noiseRouter.finalDensity().sample(unblendedNoisePos)));
     }
 
+    /**
+     * Used by various functions.
+     * @param world
+     * @param noiseConfig
+     * @param x
+     * @param z
+     * @param columnSample
+     * @param stopPredicate
+     * @return
+     */
     private OptionalInt sampleHeightmap(HeightLimitView world, NoiseConfig noiseConfig, int x, int z, @Nullable MutableObject<VerticalBlockSample> columnSample, @Nullable Predicate<BlockState> stopPredicate) {
         GenerationShapeConfig generationShapeConfig = ((ChunkGeneratorSettings) this.settings.value()).generationShapeConfig().trimHeight(world);
         int i = generationShapeConfig.verticalCellBlockCount();
@@ -233,8 +309,13 @@ public final class ChunkGenerator2D extends ChunkGenerator {
     }
 
 
-    /* the method that places grass, dirt, and other things on top of the world, as well as handling the bedrock and deepslate layers,
-    as well as a few other miscellaneous things. without this method, your world is just a blank stone (or whatever your default block is) canvas (plus any ores, etc) */
+    /**
+     * Uses horizontal limiting (chunkPos < maxDist)
+     * @param region
+     * @param structures
+     * @param noiseConfig
+     * @param chunk
+     */
     @Override
     public void buildSurface(ChunkRegion region, StructureAccessor structures, NoiseConfig noiseConfig, Chunk chunk) {
         if (Math.abs(chunk.getPos().x) <= maxChunkDistFromXAxis) {
@@ -254,6 +335,10 @@ public final class ChunkGenerator2D extends ChunkGenerator {
         noiseConfig.getSurfaceBuilder().buildSurface(noiseConfig, biomeAccess, biomeRegistry, chunkGeneratorSettings.usesLegacyRandom(), heightContext, chunk, chunkNoiseSampler, chunkGeneratorSettings.surfaceRule());
     }
 
+    /**
+     * Uses defaultGen to generate carvers, as it needs to be a NoiseChunkGenerator.
+     * @return
+     */
     @Override
     public void carve(ChunkRegion chunkRegion, long seed, NoiseConfig noiseConfig, BiomeAccess biomeAccess, StructureAccessor structureAccessor, Chunk chunk, GenerationStep.Carver carverStep) {
         BiomeAccess biomeAccess2 = biomeAccess.withSource((biomeX, biomeY, biomeZ) -> {
@@ -296,6 +381,8 @@ public final class ChunkGenerator2D extends ChunkGenerator {
      * Placing terrain
      * Inside of maxChunkDistFromXAxis is default terrain.
      * Outside is just border blocks.
+     *
+     * Uses horizontal limiting (chunkPos < maxDist)
      *
      * @param executor
      * @param blender
@@ -351,6 +438,16 @@ public final class ChunkGenerator2D extends ChunkGenerator {
         return CompletableFuture.completedFuture(chunk);
     }
 
+    /**
+     * Needed for populateNoise.
+     * @param blender
+     * @param structureAccessor
+     * @param noiseConfig
+     * @param chunk
+     * @param minimumCellY
+     * @param cellHeight
+     * @return
+     */
     private Chunk populateNoise(Blender blender, StructureAccessor structureAccessor, NoiseConfig noiseConfig, Chunk chunk, int minimumCellY, int cellHeight) {
         ChunkNoiseSampler chunkNoiseSampler = chunk.getOrCreateChunkNoiseSampler((chunkx) -> this.createChunkNoiseSampler(chunkx, structureAccessor, blender, noiseConfig));
         Heightmap heightmap = chunk.getHeightmap(Heightmap.Type.OCEAN_FLOOR_WG);
@@ -402,7 +499,6 @@ public final class ChunkGenerator2D extends ChunkGenerator {
                                 if (blockState == null) {
                                     blockState = ((ChunkGeneratorSettings) this.settings.value()).defaultBlock();
                                 }
-                                //blockState = this.getBlockState(chunkNoiseSampler, x, t, aa, blockState);
                                 if (blockState != AIR && !SharedConstants.isOutsideGenerationArea(chunk.getPos())) {
                                     chunkSection.setBlockState(y, u, ab, blockState, false);
                                     heightmap.trackUpdate(y, t, ab, blockState);
@@ -424,25 +520,50 @@ public final class ChunkGenerator2D extends ChunkGenerator {
         return chunk;
     }
 
+    /**
+     * TODO: Unsure if needed
+     * @param chunkNoiseSampler
+     * @param x
+     * @param y
+     * @param z
+     * @param state
+     * @return
+     */
     private BlockState getBlockState(ChunkNoiseSampler chunkNoiseSampler, int x, int y, int z, BlockState state) {
         return state;
     }
 
+    /**
+     * Needed for Inheritance.
+     * @return
+     */
     @Override
     public int getWorldHeight() {
         return ((ChunkGeneratorSettings) this.settings.value()).generationShapeConfig().height();
     }
 
+    /**
+     * Needed for Inheritance.
+     * @return
+     */
     @Override
     public int getSeaLevel() {
         return ((ChunkGeneratorSettings) this.settings.value()).seaLevel();
     }
 
+    /**
+     * Needed for Inheritance.
+     * @return
+     */
     @Override
     public int getMinimumY() {
         return ((ChunkGeneratorSettings) this.settings.value()).generationShapeConfig().minimumY();
     }
 
+    /**
+     * Needed for Inheritance.
+     * @param region
+     */
     @Override
     public void populateEntities(ChunkRegion region) {
         if (!((ChunkGeneratorSettings) this.settings.value()).mobGenerationDisabled()) {
@@ -454,6 +575,12 @@ public final class ChunkGenerator2D extends ChunkGenerator {
         }
     }
 
+    /**
+     * Uses horizontal limiting (chunkPos < maxDist)
+     * @param world
+     * @param chunk
+     * @param structureAccessor
+     */
     @Override
     public void generateFeatures(StructureWorldAccess world, Chunk chunk, StructureAccessor structureAccessor) {
         if (Math.abs(chunk.getPos().x) <= maxChunkDistFromXAxis) {
@@ -464,6 +591,8 @@ public final class ChunkGenerator2D extends ChunkGenerator {
     /**
      * Noise config made from placement calculator is blank = only river biome structures generate.
      * Identical to default, but overriding for the purpose of using the local trySetStructureStart method.
+     *
+     * Uses horizontal limiting (chunkPos < maxDist)
      *
      * @param registryManager
      * @param placementCalculator
@@ -573,7 +702,7 @@ public final class ChunkGenerator2D extends ChunkGenerator {
     }
 
     /**
-     * Used by trySetStructureStart
+     * Needed for trySetStructureStart
      *
      * @param structureAccessor
      * @param chunk
@@ -588,6 +717,7 @@ public final class ChunkGenerator2D extends ChunkGenerator {
 
 
     /**
+     * TODO: Unsure if needed
      * Finds all structures that the given chunk intersects, and adds references to their starting chunks to it.
      * A radius of 8 chunks around the given chunk will be searched for structure starts.
      */
@@ -634,6 +764,17 @@ public final class ChunkGenerator2D extends ChunkGenerator {
         }
     }
 
+    /**
+     * TODO: Fix later this sucks
+     * Added to change how searching works to accomodate for strongholds mainly... it sucks. Need to make my own rng system and structure placement.
+     * No more concentric rings structure searching.
+     * @param world
+     * @param structures
+     * @param center
+     * @param radius
+     * @param skipReferencedStructures
+     * @return
+     */
     @Nullable
     public Pair<BlockPos, RegistryEntry<Structure>> locateStructure(ServerWorld world, RegistryEntryList<Structure> structures, BlockPos center, int radius, boolean skipReferencedStructures) {
         StructurePlacementCalculator structurePlacementCalculator = world.getChunkManager().getStructurePlacementCalculator();
@@ -677,7 +818,7 @@ public final class ChunkGenerator2D extends ChunkGenerator {
                 while (var30.hasNext()) {
                     Map.Entry<StructurePlacement, Set<RegistryEntry<Structure>>> entry2 = (Map.Entry) var30.next();
                     StructurePlacement structurePlacement = entry2.getKey();
-                    Pair<BlockPos, RegistryEntry<Structure>> pair3 = locateRandomSpreadStructure((Set) entry2.getValue(), world, structureAccessor, i, j, 1024, skipReferencedStructures, structurePlacementCalculator.getStructureSeed(), structurePlacement);
+                    Pair<BlockPos, RegistryEntry<Structure>> pair3 = locateRandomSpreadStructure((Set) entry2.getValue(), world, structureAccessor, i, j, 128, skipReferencedStructures, structurePlacementCalculator.getStructureSeed(), structurePlacement);
                     if (pair3 != null) {
                         bl = true;
                         double f = center.getSquaredDistance((Vec3i) pair3.getFirst());
@@ -698,9 +839,25 @@ public final class ChunkGenerator2D extends ChunkGenerator {
         }
     }
 
+    /**
+     * The search alg that is okay, it does it's job.
+     * Basic BFS
+     *
+     * Uses horizontal limiting (chunkPos < maxDist)
+     *
+     * @param structures
+     * @param world
+     * @param structureAccessor
+     * @param centerChunkX
+     * @param centerChunkZ
+     * @param zMax
+     * @param skipReferencedStructures
+     * @param seed
+     * @param placement
+     * @return
+     */
     @Nullable
     private static Pair<BlockPos, RegistryEntry<Structure>> locateRandomSpreadStructure(Set<RegistryEntry<Structure>> structures, WorldView world, StructureAccessor structureAccessor, int centerChunkX, int centerChunkZ, int zMax, boolean skipReferencedStructures, long seed, StructurePlacement placement) {
-        placement.
         int k = 0;
         while (k <= zMax) {
             int j = 0;
@@ -716,43 +873,53 @@ public final class ChunkGenerator2D extends ChunkGenerator {
         return null;
     }
 
+    /**
+     * Needed for locateRandomSpreadStructure.
+     * @param structures
+     * @param world
+     * @param structureAccessor
+     * @param skipReferencedStructures
+     * @param placement
+     * @param pos
+     * @return
+     */
     @Nullable
     private static Pair<BlockPos, RegistryEntry<Structure>> locateStructure(Set<RegistryEntry<Structure>> structures, WorldView world, StructureAccessor structureAccessor, boolean skipReferencedStructures, StructurePlacement placement, ChunkPos pos) {
         Iterator var6 = structures.iterator();
-        System.out.println(pos.x + " " + pos.z);
-        if (Math.abs(pos.x) <= maxChunkDistFromXAxis + structureChunkDistanceFlexibility + 2) {
-            //System.out.println("looking");
-            RegistryEntry registryEntry;
-            StructureStart structureStart;
+        RegistryEntry registryEntry;
+        StructureStart structureStart;
+        do {
             do {
                 do {
+                    StructurePresence structurePresence;
                     do {
-                        StructurePresence structurePresence;
-                        do {
-                            if (!var6.hasNext()) {
-                                return null;
-                            }
-
-                            registryEntry = (RegistryEntry) var6.next();
-                            structurePresence = structureAccessor.getStructurePresence(pos, (Structure) registryEntry.value(), skipReferencedStructures);
-                        } while (structurePresence == StructurePresence.START_NOT_PRESENT);
-
-                        if (!skipReferencedStructures && structurePresence == StructurePresence.START_PRESENT) {
-                            return Pair.of(placement.getLocatePos(pos), registryEntry);
+                        if (!var6.hasNext()) {
+                            return null;
                         }
 
-                        Chunk chunk = world.getChunk(pos.x, pos.z, ChunkStatus.STRUCTURE_STARTS);
-                        structureStart = structureAccessor.getStructureStart(ChunkSectionPos.from(chunk), (Structure) registryEntry.value(), chunk);
-                    } while (structureStart == null);
-                } while (!structureStart.hasChildren());
-            } while (skipReferencedStructures && !checkNotReferenced(structureAccessor, structureStart));
+                        registryEntry = (RegistryEntry) var6.next();
+                        structurePresence = structureAccessor.getStructurePresence(pos, (Structure) registryEntry.value(), skipReferencedStructures);
+                    } while (structurePresence == StructurePresence.START_NOT_PRESENT);
 
-            return Pair.of(placement.getLocatePos(structureStart.getPos()), registryEntry);
-        }
-        //System.out.println("nope");
-        return null;
+                    if (!skipReferencedStructures && structurePresence == StructurePresence.START_PRESENT) {
+                        return Pair.of(placement.getLocatePos(pos), registryEntry);
+                    }
+
+                    Chunk chunk = world.getChunk(pos.x, pos.z, ChunkStatus.STRUCTURE_STARTS);
+                    structureStart = structureAccessor.getStructureStart(ChunkSectionPos.from(chunk), (Structure) registryEntry.value(), chunk);
+                } while (structureStart == null);
+            } while (!structureStart.hasChildren());
+        } while (skipReferencedStructures && !checkNotReferenced(structureAccessor, structureStart));
+
+        return Pair.of(placement.getLocatePos(structureStart.getPos()), registryEntry);
     }
 
+    /**
+     * Needed for locateRandomSpreadStructure, locateStructure.
+     * @param structureAccessor
+     * @param start
+     * @return
+     */
     private static boolean checkNotReferenced(StructureAccessor structureAccessor, StructureStart start) {
         if (start.isNeverReferenced()) {
             structureAccessor.incrementReferences(start);
