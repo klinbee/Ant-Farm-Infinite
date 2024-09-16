@@ -441,9 +441,9 @@ public final class ChunkGenerator2D extends ChunkGenerator {
             int j = chunk.getBottomY() + i;
             for (int k = 0; k < 16; ++k) {
                 for (int l = 0; l < 16; ++l) {
-                    chunk.setBlockState(mutable.set(k, j, l), AIR, false);
-                    heightmap.trackUpdate(k, j, l, AIR);
-                    heightmap2.trackUpdate(k, j, l, AIR);
+                    chunk.setBlockState(mutable.set(k, j, l), BORDER, false);
+                    heightmap.trackUpdate(k, j, l, BORDER);
+                    heightmap2.trackUpdate(k, j, l, BORDER);
                 }
             }
         }
